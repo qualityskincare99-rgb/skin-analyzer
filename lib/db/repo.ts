@@ -78,7 +78,27 @@ export interface RecommendationRow {
   created_at: string;
 }
 
-export function createRepo(db: SupabaseClient) {
+/**
+ * The persistence contract the API layer codes against. Two implementations:
+ * `createRepo` (Supabase, production) and `createMemoryRepo` (lib/db/memory.ts,
+ * testing-ladder stage 1 — local, no store).
+ */
+export interface SkinRepo {
+  createSession(input?: { shopifyCustomerId?: string }): Promise<SessionRow>;
+  recordConsent(input: { sessionId: string; scope: ConsentScope[]; ipHash?: string }): Promise<ConsentRow>;
+  saveAnalysis(input: { sessionId: string; assessment: SkinAssessment; imageRefs?: string[] }): Promise<AnalysisRow>;
+  saveAnswers(input: { sessionId: string; answers: Record<string, string> }): Promise<AnswerRow[]>;
+  saveRecommendation(input: { sessionId: string; result: ConsultationResult }): Promise<RecommendationRow>;
+  deleteAllForSession(sessionId: string): Promise<{ imagesRemoved: number }>;
+  logAudit(event: AuditEvent, sessionId: string | null, meta?: Record<string, unknown>): Promise<void>;
+  getSession(id: string): Promise<SessionRow | null>;
+  getConsent(sessionId: string): Promise<ConsentRow[]>;
+  getLatestAnalysis(sessionId: string): Promise<AnalysisRow | null>;
+  getAnswers(sessionId: string): Promise<AnswerRow[]>;
+  updateSessionState(id: string, state: SessionState): Promise<void>;
+}
+
+export function createRepo(db: SupabaseClient): SkinRepo {
   function fail(op: string, error: { message: string }): never {
     throw new Error(`repo.${op}: ${error.message}`);
   }
@@ -220,6 +240,50 @@ export function createRepo(db: SupabaseClient) {
     return { imagesRemoved: refs.length };
   }
 
+  async function getSession(id: string): Promise<SessionRow | null> {
+    const { data, error } = await db.from('sessions').select().eq('id', id).maybeSingle();
+    if (error) fail('getSession', error);
+    return (data as SessionRow | null) ?? null;
+  }
+
+  async function getConsent(sessionId: string): Promise<ConsentRow[]> {
+    const { data, error } = await db
+      .from('consent')
+      .select()
+      .eq('session_id', sessionId)
+      .order('granted_at', { ascending: true });
+    if (error) fail('getConsent', error);
+    return data as ConsentRow[];
+  }
+
+  async function getLatestAnalysis(sessionId: string): Promise<AnalysisRow | null> {
+    const { data, error } = await db
+      .from('analyses')
+      .select()
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) fail('getLatestAnalysis', error);
+    return (data as AnalysisRow | null) ?? null;
+  }
+
+  async function getAnswers(sessionId: string): Promise<AnswerRow[]> {
+    const { data, error } = await db
+      .from('answers')
+      .select()
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true });
+    if (error) fail('getAnswers', error);
+    return data as AnswerRow[];
+  }
+
+  async function updateSessionState(id: string, state: SessionState): Promise<void> {
+    const { error } = await db.from('sessions').update({ state }).eq('id', id);
+    if (error) fail('updateSessionState', error);
+  }
+
   return {
     createSession,
     recordConsent,
@@ -228,7 +292,10 @@ export function createRepo(db: SupabaseClient) {
     saveRecommendation,
     deleteAllForSession,
     logAudit,
+    getSession,
+    getConsent,
+    getLatestAnalysis,
+    getAnswers,
+    updateSessionState,
   };
 }
-
-export type SkinRepo = ReturnType<typeof createRepo>;
