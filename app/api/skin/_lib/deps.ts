@@ -6,31 +6,24 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createRepo, type SkinRepo } from '@/lib/db/repo';
-import { createMemoryRepo } from '@/lib/db/memory';
 import { MockVisionProvider } from '@/lib/vision/mock';
 import type { SkinVisionProvider } from '@/lib/vision/provider';
 import type { ConcernScore, SkinAssessment, SkinType } from '@/lib/vision/types';
 import { ApiError } from './http';
 
 let repo: SkinRepo | undefined;
-let warnedMemory = false;
 
 export function getRepo(): SkinRepo {
   if (!repo) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (url && key) {
-      repo = createRepo(createClient(url, key, { auth: { persistSession: false } }));
-    } else {
-      if (!warnedMemory) {
-        console.warn(
-          '[skin-api] SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — running on the IN-MEMORY repo '
-          + '(testing ladder stage 1, spec §14). Data is process-local and lost on restart.',
-        );
-        warnedMemory = true;
-      }
-      repo = createMemoryRepo();
-    }
+    if (!url || !key)
+      // No in-memory fallback: an API that silently forgets consent rows and
+      // audit entries is worse than one that refuses to run. Fill .env.local.
+      throw new Error(
+        'SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set — the API does not run without a database (see .env.example)',
+      );
+    repo = createRepo(createClient(url, key, { auth: { persistSession: false } }));
   }
   return repo;
 }

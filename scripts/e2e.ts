@@ -1,19 +1,34 @@
 /**
  * End-to-end consultation walk through the real HTTP API (spec §10), mock
- * vision provider, in-memory repo — testing ladder stage 1 (spec §14).
+ * vision provider, real Supabase database — testing ladder stage 2 (spec §14:
+ * "local, full stack — real Supabase, mock vision").
  *
- * Boots `next dev` on a throwaway port, then drives the five engine demo
+ * Builds the app and boots `next start` on a throwaway port (Next 16 allows
+ * only one *dev* server per project, and one is usually running on :3000 —
+ * the production server has no such guard), then drives the five engine demo
  * scenarios (skinEngine.ts) and asserts exact parity with the engine's
  * output: routes, confidences, SKUs, scores, escalation reasons. Also covers
  * the API-level guards: auth, consent-before-analyze, answer validation, and
- * the CORS allowlist.
+ * the CORS allowlist. Every session it creates is erased afterwards via
+ * repo.deleteAllForSession (audit rows survive by design).
  *
  * Run: npm run test:e2e
  */
 
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { createClient } from '@supabase/supabase-js';
+import { createRepo } from '../lib/db/repo';
 import type { SkinAssessment } from '../lib/vision/types';
+
+// The spawned server reads .env.local itself; the script needs the same vars
+// for post-run cleanup — and fails fast if they're missing, since the API now
+// refuses to run without a database.
+try { process.loadEnvFile('.env.local'); } catch { /* fall back to shell env */ }
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — fill in .env.local first.');
+  process.exit(1);
+}
 
 const PORT = 4319;
 const API = `http://127.0.0.1:${PORT}/api/skin`;
@@ -98,9 +113,12 @@ async function api(
   return { status: res.status, headers: res.headers, json: body };
 }
 
+const createdSessions: string[] = [];
+
 async function newSession(): Promise<{ sessionId: string; token: string }> {
   const r = await api('POST', '/session');
   if (r.status !== 201) throw new Error(`POST /session failed: ${r.status} ${JSON.stringify(r.json)}`);
+  createdSessions.push(r.json.sessionId);
   return r.json;
 }
 
@@ -255,22 +273,47 @@ async function guards(): Promise<void> {
   const postOk = await api('POST', '/session', { origin: ALLOWED_ORIGIN });
   eq('actual response also carries the CORS grant',
     postOk.headers.get('access-control-allow-origin'), ALLOWED_ORIGIN);
+  if (postOk.json?.sessionId) createdSessions.push(postOk.json.sessionId);
+}
+
+/** Erase everything the suite wrote — same path /delete will use (spec §12). */
+async function cleanupSessions(): Promise<void> {
+  if (createdSessions.length === 0) return;
+  const repo = createRepo(createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  ));
+  let cleaned = 0;
+  for (const id of createdSessions) {
+    try { await repo.deleteAllForSession(id); cleaned++; }
+    catch (err) { console.error(`  cleanup failed for session ${id}:`, err); }
+  }
+  console.log(`Cleaned up ${cleaned}/${createdSessions.length} e2e sessions (audit rows retained by design).`);
 }
 
 // ── Runner ───────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  console.log(`Booting next dev on :${PORT} (in-memory repo, mock provider)…`);
-  const server = spawn('node_modules/.bin/next', ['dev', '-p', String(PORT)], {
-    env: {
-      ...process.env,
-      SESSION_JWT_SECRET: 'e2e-only-secret-do-not-use-anywhere-else',
-      SHOPIFY_STOREFRONT_ORIGIN: ALLOWED_ORIGIN,
-      // Force testing-ladder stage 1 even if the shell has real Supabase vars.
-      SUPABASE_URL: '',
-      SUPABASE_SERVICE_ROLE_KEY: '',
-      VISION_PROVIDER: 'mock',
-    },
+  // Deterministic test values for token signing and the CORS allowlist;
+  // SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY flow through from .env.local.
+  const serverEnv = {
+    ...process.env,
+    SESSION_JWT_SECRET: 'e2e-only-secret-do-not-use-anywhere-else',
+    SHOPIFY_STOREFRONT_ORIGIN: ALLOWED_ORIGIN,
+    VISION_PROVIDER: 'mock',
+  };
+
+  console.log('Building production bundle…');
+  const build = spawnSync('node_modules/.bin/next', ['build'], {
+    env: serverEnv, encoding: 'utf8',
+  });
+  if (build.status !== 0)
+    throw new Error(`next build failed:\n${build.stdout ?? ''}${build.stderr ?? ''}`);
+
+  console.log(`Booting next start on :${PORT} (real Supabase, mock provider)…`);
+  const server = spawn('node_modules/.bin/next', ['start', '-p', String(PORT)], {
+    env: serverEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let serverLog = '';
@@ -301,6 +344,7 @@ async function main(): Promise<void> {
       allRoutines.flat().every((r: any) => r.sku !== 'QSC-STS' && r.sku !== 'QSC-AFS'));
   } finally {
     server.kill('SIGTERM');
+    await cleanupSessions();
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -3,9 +3,9 @@
  * provider — no vendor, no store"). Same contract and side effects as the
  * Supabase repo so the API layer can't tell the difference.
  *
- * Process-local: every restart wipes it. This is NOT a production fallback —
- * deps.ts selects it only when the Supabase env vars are absent, and warns
- * loudly when it does.
+ * Process-local: every restart wipes it. Not wired into the API — deps.ts
+ * refuses to run without real Supabase env. Kept for explicit use in unit-test
+ * harnesses that want the repo contract without a database.
  */
 
 import { randomUUID } from 'node:crypto';
