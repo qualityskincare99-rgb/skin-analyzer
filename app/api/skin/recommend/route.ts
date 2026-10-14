@@ -38,6 +38,7 @@ export const POST = handle(async (req) => {
     route: 'RECOMMEND',
     confidence: fmtConfidence(snap.confidence),
     questionsAsked: snap.questionsAsked,
+    concerns: snap.current.concerns,
     routine: buildRoutine(snap.current),
     disclaimer: COSMETIC_DISCLAIMER,
   };

@@ -6,7 +6,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createRepo, type SkinRepo } from '@/lib/db/repo';
-import { MockVisionProvider } from '@/lib/vision/mock';
+import { DEMO_PRESET, MockVisionProvider } from '@/lib/vision/mock';
 import type { SkinVisionProvider } from '@/lib/vision/provider';
 import type { ConcernScore, SkinAssessment, SkinType } from '@/lib/vision/types';
 import { ApiError } from './http';
@@ -47,6 +47,13 @@ export function getVisionProvider(mockAssessment: unknown): SkinVisionProvider {
     // hautai / perfectCorp adapters are pending (spec §16). Fail loud, never fall back.
     throw new ApiError(501, `vision provider '${which}' is not implemented yet`);
   }
+  // No assessment supplied: the caller is the real UI posting captured frames
+  // while no vendor adapter exists yet. Serve the fixed DEMO_PRESET so the
+  // whole consultation runs end to end. The frames are NOT read — every
+  // capture yields the same assessment until hautai.ts / perfectCorp.ts land.
+  if (mockAssessment === undefined) return new MockVisionProvider(DEMO_PRESET);
+
+  // Supplied but wrong is still an error: the testing ladder's stage 1-2 seam.
   return new MockVisionProvider(validateMockAssessment(mockAssessment));
 }
 

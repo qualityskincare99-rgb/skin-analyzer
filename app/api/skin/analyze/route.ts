@@ -29,9 +29,13 @@ export const POST = handle(async (req) => {
   const canAnalyze = consents.some(c => !c.revoked_at && c.scope.includes('image_analysis'));
   if (!canAnalyze) throw new ApiError(403, "consent with scope 'image_analysis' required before analysis");
 
-  const body = await readJson<{ mockAssessment?: unknown }>(req);
+  // `frames` is what the UI posts (the captured front/left/right data URLs);
+  // `mockAssessment` is the test seam. Frames are handed to whichever provider
+  // is configured and are never persisted here — image storage and the purge
+  // job land with the real adapter, hence imageRefs [].
+  const body = await readJson<{ mockAssessment?: unknown; frames?: unknown }>(req);
   const provider = getVisionProvider(body.mockAssessment);
-  const assessment = await provider.analyze(null);
+  const assessment = await provider.analyze(body.frames ?? null);
   await repo.saveAnalysis({ sessionId, assessment, imageRefs: [] });
 
   // ── GATE 1: raw image flags, before anything else.

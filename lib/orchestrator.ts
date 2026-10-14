@@ -1,3 +1,4 @@
+import type { ConcernScore } from './vision/types';
 import type { SkinVisionProvider } from './vision/provider';
 import type { Question } from './questions/bank';
 import { triageQuestions } from './questions/triage';
@@ -11,6 +12,10 @@ export interface ConsultationResult {
   confidence: number;
   escalationReason?: string;
   questionsAsked: string[];
+  /** What the assessment found, as scored at recommendation time. Present on
+   *  RECOMMEND only: an escalated consultation deliberately shows the user
+   *  nothing about their skin, just the referral. */
+  concerns?: ConcernScore[];
   routine: RoutineItem[];
   disclaimer: string;
 }
@@ -65,6 +70,7 @@ export async function runConsultation(
     route: 'RECOMMEND',
     confidence: Number(confidence.toFixed(3)),
     questionsAsked: asked,
+    concerns: assessment.concerns,
     routine: buildRoutine(assessment),
     disclaimer: COSMETIC_DISCLAIMER,
   };

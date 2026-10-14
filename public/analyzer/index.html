@@ -1,0 +1,771 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Skin Analyser | Quality SkinCare</title>
+<meta name="description" content="Scan your skin and get a routine built only from the Quality SkinCare products it needs. Cosmetic guidance, not a medical diagnosis."/>
+<link rel="icon" href="assets/qsc-logo.png"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#F4FAF8;--bg-2:#E8F3F0;--white:#FFFFFF;
+  --ink:#12332F;--ink-soft:#3E5C57;--muted:#5F7773;
+  --teal:#179587;--teal-deep:#0E4F47;--teal-tint:#E3F4F1;
+  --amber:#8F6A22;--amber-tint:#FBF3E3;--clay:#A94E40;--clay-tint:#FBEDEA;
+  --line:rgba(18,51,47,.12);--line-soft:rgba(18,51,47,.07);
+  --shadow-sm:0 2px 10px rgba(14,79,71,.06);--shadow-md:0 14px 40px rgba(14,79,71,.10);--shadow-lg:0 30px 80px rgba(14,79,71,.16);
+  --f-display:"Playfair Display",Georgia,serif;--f-body:"Instrument Sans",system-ui,sans-serif;--f-mono:"Spline Sans Mono",ui-monospace,monospace;
+  --maxw:1240px;--radius:22px;--radius-sm:14px;--ease:cubic-bezier(.22,.61,.36,1);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:var(--teal);text-decoration:none}
+a:hover{color:var(--teal-deep)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter-spacing:-.02em;margin:0}
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:4px}
+.wrap{width:100%;max-width:var(--maxw);margin-inline:auto;padding-inline:clamp(20px,5vw,40px)}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--teal);display:inline-flex;align-items:center;gap:9px}
+.eyebrow::before{content:"";width:22px;height:1px;background:var(--teal)}
+.sub{color:var(--ink-soft);font-size:clamp(15px,1.4vw,17px);text-wrap:pretty}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-size:14.5px;font-weight:500;padding:15px 26px;border-radius:100px;transition:transform .4s var(--ease),background .3s var(--ease),box-shadow .4s var(--ease),opacity .3s}
+.btn .arrow{transition:transform .4s var(--ease)}
+.btn:hover .arrow{transform:translateX(4px)}
+.btn-primary{background:var(--teal);color:#fff;box-shadow:var(--shadow-sm)}
+.btn-primary:hover{background:var(--teal-deep);color:#fff;transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;background:var(--teal)}
+.btn-ghost{border:1px solid var(--line);color:var(--ink);background:rgba(255,255,255,.6)}
+.btn-ghost:hover{background:var(--white);color:var(--ink);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+.link-btn{font-size:13.5px;color:var(--ink-soft);text-decoration:underline;text-underline-offset:3px}
+.link-btn:hover{color:var(--ink)}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:90;background:rgba(244,250,248,.9);backdrop-filter:blur(18px) saturate(1.2);border-bottom:1px solid var(--line-soft)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px;gap:20px}
+.brand{display:flex;align-items:center;gap:12px;color:var(--ink)}
+.brand:hover{color:var(--ink)}
+.brand img{width:34px;height:50px;object-fit:contain}
+.brand span{font-family:var(--f-display);font-size:21px;letter-spacing:-.02em}
+.brand span em{color:var(--teal);font-style:italic}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none;margin:0;padding:0}
+.nav-links a{font-size:14.5px;color:var(--ink-soft);padding:4px 0}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a.pill{background:var(--teal-tint);color:var(--teal-deep);padding:7px 14px;border-radius:100px}
+@media(max-width:860px){.nav-links li:not(:last-child){display:none}}
+
+/* Shell */
+.shell{padding-block:clamp(40px,6vw,72px);position:relative;overflow:hidden}
+.shell .bgmesh{position:absolute;inset:0;z-index:0;background:radial-gradient(46% 55% at 12% 12%,rgba(23,149,135,.12),transparent 60%),radial-gradient(42% 52% at 92% 88%,rgba(23,149,135,.08),transparent 60%);pointer-events:none}
+.shell .wrap{position:relative;z-index:1}
+
+/* Stepper */
+.stepper{display:flex;align-items:center;gap:10px;margin-bottom:34px;flex-wrap:wrap}
+.stepper .st{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);transition:color .4s}
+.stepper .dot{width:22px;height:22px;border-radius:50%;border:1px solid var(--line);display:grid;place-items:center;font-size:10px;background:rgba(255,255,255,.7);transition:.4s var(--ease)}
+.stepper .st.on{color:var(--teal-deep)}
+.stepper .st.on .dot{background:var(--teal);border-color:var(--teal);color:#fff}
+.stepper .st.done .dot{background:var(--teal-tint);border-color:var(--teal);color:var(--teal-deep)}
+.stepper .sep{flex:1;min-width:14px;height:1px;background:var(--line);max-width:44px}
+
+/* Panels */
+.panel{display:none;animation:fade .5s var(--ease)}
+.panel.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.grid2{display:grid;grid-template-columns:1.02fr .98fr;gap:clamp(28px,5vw,60px);align-items:center}
+@media(max-width:920px){.grid2{grid-template-columns:1fr}}
+.h-lead{font-size:clamp(34px,5vw,60px);letter-spacing:-.03em}
+.h-lead em{font-style:italic;color:var(--teal)}
+.mini-steps{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 28px}
+.mini-steps span{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink-soft);background:rgba(255,255,255,.7);border:1px solid var(--line-soft);padding:6px 11px;border-radius:100px}
+
+/* Consent */
+.consent{background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow-sm);margin-top:8px}
+.consent h4{font-family:var(--f-body);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.cslist{list-style:none;margin:0 0 18px;padding:0;display:grid;gap:10px}
+.cslist li{display:flex;gap:10px;font-size:14px;color:var(--ink-soft);line-height:1.55}
+.cslist svg{flex:none;color:var(--teal);margin-top:3px}
+.check{display:flex;gap:11px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:var(--radius-sm);cursor:pointer;transition:.3s var(--ease);background:var(--bg)}
+.check:hover{border-color:var(--teal);background:var(--teal-tint)}
+.check input{margin-top:3px;accent-color:var(--teal);width:16px;height:16px;flex:none}
+.check span{font-size:13.5px;color:var(--ink-soft);line-height:1.5}
+.alt{display:flex;justify-content:center;margin-top:14px}
+
+/* Stage */
+.stage{position:relative;aspect-ratio:1/1.05;border-radius:28px;overflow:hidden;background:linear-gradient(165deg,#17473F 0%,#123B36 50%,#0B2723 100%);box-shadow:var(--shadow-lg)}
+.stage video,.stage canvas.snap{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.stage .glow{position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 70% 20%,rgba(23,149,135,.55),rgba(23,149,135,0) 70%);pointer-events:none}
+.stage .range{position:absolute;left:0;right:0;bottom:92px;display:flex;align-items:flex-end;justify-content:center;gap:14px;z-index:1}
+.stage .range img{width:auto;filter:drop-shadow(0 18px 20px rgba(0,0,0,.35))}
+.stage .veil{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:30px;z-index:3;background:linear-gradient(165deg,#17473F,#0B2723)}
+.stage .veil.hide{display:none}
+.stage .veil h3{color:#fff}
+.stage .veil p{color:#CFE7E2}
+.stage .veil .mark{width:56px;height:56px;border-radius:16px;border:1.5px solid #7FD3C7;display:grid;place-items:center;color:#7FD3C7;margin:0 auto 16px}
+.stage .veil .link-btn{color:#CFE7E2;margin-top:14px;display:inline-block}
+.face-guide{position:absolute;inset:0;z-index:2;pointer-events:none}
+.face-guide .oval{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56%;height:70%;border-radius:50% 50% 46% 46%;border:1.5px dashed rgba(127,211,199,.6);transition:border-color .4s,box-shadow .4s}
+.face-guide.good .oval{border-color:#7FD3C7;border-style:solid;box-shadow:0 0 0 4px rgba(127,211,199,.2)}
+.scanline{position:absolute;left:8%;right:8%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,#7FD3C7,transparent);box-shadow:0 0 16px 2px rgba(127,211,199,.55);animation:scan 3s ease-in-out infinite;z-index:2;display:none}
+.scanline.on{display:block}
+@keyframes scan{0%,100%{top:22%}50%{top:72%}}
+.stage-top{position:absolute;top:0;left:0;right:0;z-index:4;display:flex;justify-content:space-between;align-items:center;padding:18px 20px}
+.live{font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;color:var(--teal-deep);display:flex;gap:7px;align-items:center;background:rgba(255,255,255,.92);padding:6px 11px;border-radius:100px}
+.live .p{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+.stage-logo{background:#fff;padding:5px;display:flex}
+.stage-logo img{width:30px;height:44px;object-fit:contain}
+.shots{display:flex;gap:6px}
+.shot{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,.5);background:rgba(255,255,255,.9);display:grid;place-items:center;font-family:var(--f-mono);font-size:9px;color:var(--muted);transition:.3s var(--ease)}
+.shot.done{background:var(--teal);border-color:var(--teal);color:#fff}
+.shot.cur{border-color:var(--teal);color:var(--teal-deep);box-shadow:0 0 0 3px rgba(127,211,199,.35)}
+.stage-bot{position:absolute;bottom:0;left:0;right:0;z-index:4;padding:20px;display:grid;gap:12px;justify-items:center;background:linear-gradient(to top,rgba(11,39,35,.75),transparent)}
+.guidance{font-size:13px;color:var(--ink-soft);background:rgba(255,255,255,.94);padding:8px 15px;border-radius:100px;text-align:center}
+.guidance.warn{color:var(--clay);background:var(--clay-tint)}
+.shutter{width:64px;height:64px;border-radius:50%;background:#fff;color:var(--teal-deep);display:grid;place-items:center;box-shadow:var(--shadow-md);transition:.3s var(--ease)}
+.shutter:hover{transform:scale(1.06)}
+.shutter:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+/* Readout */
+.readout{display:grid;gap:9px;margin-top:24px}
+.bar2{background:var(--white);border-radius:12px;padding:11px 15px;border:1px solid var(--line-soft)}
+.bl{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10.5px;color:var(--ink-soft);letter-spacing:.05em}
+.meter{height:5px;border-radius:3px;background:rgba(23,149,135,.14);margin-top:8px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;border-radius:3px;background:var(--teal);transition:width 1.1s var(--ease)}
+
+/* Questions */
+.qcard{background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:clamp(24px,3.5vw,38px);box-shadow:var(--shadow-md);max-width:720px;margin-inline:auto}
+.qprog{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--teal);margin-bottom:14px}
+.qcard h3{font-size:clamp(22px,2.6vw,30px);margin-bottom:6px;text-wrap:pretty}
+.qhelp{font-size:13.5px;color:var(--muted);margin:0 0 24px}
+.opts{display:grid;gap:11px}
+.opt{display:flex;align-items:center;gap:13px;padding:16px 18px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--bg);text-align:left;font-size:15px;transition:.3s var(--ease);width:100%}
+.opt:hover{border-color:var(--teal);background:var(--teal-tint);transform:translateY(-2px)}
+.opt .rad{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);flex:none;transition:.3s}
+.opt:hover .rad{border-color:var(--teal);border-width:5px}
+.qback{margin-top:20px;font-size:13.5px;color:var(--muted);display:inline-flex;gap:7px;align-items:center}
+.qback:hover{color:var(--ink)}
+
+/* Results */
+.res-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:34px}
+.conf{display:flex;align-items:center;gap:12px}
+.conf .ring{width:52px;height:52px;flex:none}
+.conf .n{font-family:var(--f-display);font-size:24px;line-height:1}
+.conf .l{font-size:12px;color:var(--muted)}
+.sec-h{font-family:var(--f-body);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px}
+.concerns{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:38px}
+.cn{background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:15px 18px}
+.cn-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:9px}
+.cn-name{font-weight:500;font-size:14.5px}
+.cn-badge{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:100px;background:var(--teal-tint);color:var(--teal-deep)}
+.cn-badge.mid{background:var(--amber-tint);color:var(--amber)}
+.cn-badge.high{background:var(--clay-tint);color:var(--clay)}
+.cn-meter{height:5px;border-radius:3px;background:rgba(23,149,135,.12);overflow:hidden}
+.cn-meter i{display:block;height:100%;border-radius:3px;background:var(--teal);width:0;transition:width 1s var(--ease)}
+.routine{display:grid;gap:16px}
+.rx{background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;display:grid;grid-template-columns:108px 1fr auto;gap:22px;align-items:center;box-shadow:var(--shadow-sm);transition:.4s var(--ease)}
+.rx:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+@media(max-width:760px){.rx{grid-template-columns:84px 1fr;gap:14px}.rx .rx-buy{grid-column:1/-1;justify-items:start;grid-auto-flow:column;align-items:center;justify-content:space-between}}
+.rx-img{aspect-ratio:1/1;border-radius:var(--radius-sm);background:var(--bg-2);overflow:hidden;display:grid;place-items:center}
+.rx-img img{width:100%;height:100%;object-fit:contain;padding:8px}
+.rx-slot{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rx-when{background:var(--teal-tint);color:var(--teal-deep);padding:3px 8px;border-radius:100px}
+.rx h4{font-family:var(--f-body);font-weight:600;font-size:17px;letter-spacing:0;margin:7px 0 6px}
+.rx .why{font-size:13.5px;color:var(--ink-soft);line-height:1.6}
+.rx .caut{margin-top:8px;font-size:12.5px;color:var(--amber);background:var(--amber-tint);padding:7px 10px;border-radius:8px}
+.rx .tl{margin-top:8px;font-family:var(--f-mono);font-size:10.5px;color:var(--teal-deep);letter-spacing:.05em}
+.rx-buy{display:grid;gap:8px;justify-items:end;min-width:150px}
+.rx-price{font-family:var(--f-display);font-size:20px}
+.rx-size{font-family:var(--f-mono);font-size:10px;color:var(--muted);letter-spacing:.06em}
+.total{margin-top:22px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:18px 22px;border-radius:var(--radius-sm);background:var(--teal-tint)}
+.total .t{font-family:var(--f-display);font-size:24px}
+.total .l{font-size:13px;color:var(--ink-soft)}
+.res-foot{margin-top:22px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.disclaimer{margin-top:26px;padding:16px 20px;border-radius:var(--radius-sm);background:var(--white);border:1px solid var(--line-soft);font-size:13px;color:var(--ink-soft);display:flex;gap:11px;line-height:1.6}
+.disclaimer svg{flex:none;color:var(--muted);margin-top:2px}
+
+/* Escalation */
+.esc{max-width:640px;margin-inline:auto;text-align:center;background:var(--white);border:1px solid rgba(169,78,64,.22);border-radius:var(--radius);padding:clamp(30px,4vw,48px);box-shadow:var(--shadow-md)}
+.esc .ic{width:60px;height:60px;border-radius:18px;background:var(--clay-tint);color:var(--clay);display:grid;place-items:center;margin:0 auto 20px}
+.esc h3{font-size:clamp(24px,3vw,32px);margin-bottom:14px}
+.esc p{color:var(--ink-soft);font-size:15.5px;line-height:1.7;margin:0 0 12px}
+.esc .cta{margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* Trust + footer */
+.trust{border-top:1px solid var(--line-soft);background:var(--bg-2);margin-top:60px}
+.trust .row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-block:22px;flex-wrap:wrap}
+.trust .item{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--ink-soft)}
+.trust .item svg{color:var(--teal);flex:none}
+.foot{background:var(--teal-deep);color:#CFE7E2}
+.foot .row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-block:22px;font-size:13px}
+.foot a{color:#fff}
+.foot a:hover{color:#7FD3C7}
+
+.toast{position:fixed;bottom:26px;left:50%;transform:translate(-50%,160%);z-index:200;background:var(--ink);color:#fff;padding:14px 22px;border-radius:100px;font-size:14px;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:10px;transition:transform .5s var(--ease)}
+.toast.show{transform:translate(-50%,0)}
+.toast svg{color:#7FD3C7}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+</style></head><body>
+
+<header class="nav"><div class="wrap nav-inner">
+  <a class="brand" href="index.html" aria-label="Quality SkinCare home"><img src="assets/qsc-logo.png" alt=""/><span><em>Quality</em> SkinCare</span></a>
+  <nav aria-label="Primary"><ul class="nav-links">
+    <li><a href="/creams.html">Creams and Washes</a></li>
+    <li><a href="/soaps.html">Soaps</a></li>
+    <li><a href="/index.html#ingredients">Ingredients</a></li>
+    <li><a href="#" class="pill" aria-current="page">Skin Analyser</a></li>
+  </ul></nav>
+</div></header>
+
+<main class="shell">
+  <div class="bgmesh" aria-hidden="true"></div>
+  <div class="wrap">
+
+    <div class="stepper" id="stepper" aria-hidden="true">
+      <div class="st on" data-s="1"><span class="dot">1</span> Consent</div><span class="sep"></span>
+      <div class="st" data-s="2"><span class="dot">2</span> Photos</div><span class="sep"></span>
+      <div class="st" data-s="3"><span class="dot">3</span> Questions</div><span class="sep"></span>
+      <div class="st" data-s="4"><span class="dot">4</span> Your routine</div>
+    </div>
+
+    <!-- 1 CONSENT -->
+    <section class="panel on" id="p-consent" aria-labelledby="h-consent">
+      <div class="grid2">
+        <div>
+          <span class="eyebrow">Skin Analyser · Free</span>
+          <h1 class="h-lead" id="h-consent" style="margin-top:18px">A routine built<br/>from <em>your</em> skin.</h1>
+          <p class="sub" style="margin-top:20px;max-width:48ch">Take three quick photos and answer four questions. We will suggest only the Quality SkinCare products your skin needs. It takes about two minutes.</p>
+          <div class="mini-steps"><span>1 · Three photos</span><span>2 · Four questions</span><span>3 · Your routine</span></div>
+
+          <div class="consent">
+            <h4>Before you start</h4>
+            <ul class="cslist">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>Your photos are analysed and then <strong>deleted within 24 hours</strong>. They are never public, never sold and never used for training.</span></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>This is <strong>cosmetic and educational guidance</strong>. It is not a medical diagnosis and not a medical device.</span></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>If anything is better assessed in person, we will tell you and recommend a dermatologist instead of a product.</span></li>
+            </ul>
+            <label class="check" for="cs">
+              <input type="checkbox" id="cs"/>
+              <span>I agree to my photos being processed for this skin analysis. I understand the results are cosmetic guidance, not medical advice.</span>
+            </label>
+            <button class="btn btn-primary" id="startBtn" disabled style="width:100%;margin-top:16px">Start my analysis <span class="arrow">→</span></button>
+            <div class="alt"><button class="link-btn" id="skipPhotos">Prefer not to use the camera? Answer questions only</button></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="stage" aria-hidden="true">
+            <div class="glow"></div>
+            <div class="range">
+              <img src="assets/bk-brightening-cream.png" alt="" style="height:150px"/>
+              <img src="assets/qb-acne-facewash.png" alt="" style="height:200px"/>
+              <img src="assets/rk-sunblock.png" alt="" style="height:240px"/>
+              <img src="assets/bk-night-cream.png" alt="" style="height:160px"/>
+            </div>
+            <div class="stage-top"><span class="stage-logo"><img src="assets/qsc-logo.png" alt=""/></span><span class="live"><span class="p"></span> READY</span></div>
+            <div class="stage-bot"><span class="guidance">Natural light works best. No makeup if you can.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 CAPTURE -->
+    <section class="panel" id="p-capture" aria-labelledby="h-capture">
+      <div class="grid2">
+        <div>
+          <span class="eyebrow">Step 2 · Photos</span>
+          <h2 class="h-lead" id="h-capture" style="font-size:clamp(28px,4vw,48px);margin-top:16px">Three quick photos.<br/>Now, your <em id="shotWord">front</em>.</h2>
+          <p class="sub" style="margin-top:18px;max-width:42ch" id="shotHelp">Face the camera straight on. Fill the oval, hold still and keep the light in front of you.</p>
+          <div class="readout">
+            <div class="bar2"><div class="bl"><span>Lighting</span><span id="mLight">0%</span></div><div class="meter"><i id="bLight"></i></div></div>
+            <div class="bar2"><div class="bl"><span>Sharpness</span><span id="mBlur">0%</span></div><div class="meter"><i id="bBlur"></i></div></div>
+            <div class="bar2"><div class="bl"><span>Framing</span><span id="mFrame">0%</span></div><div class="meter"><i id="bFrame"></i></div></div>
+          </div>
+          <p class="sub" style="margin-top:18px;font-size:13px;color:var(--muted)">The camera stays on your device until you press the shutter. Nothing is sent before that.</p>
+        </div>
+
+        <div>
+          <div class="stage" id="stage">
+            <video id="video" playsinline autoplay muted></video>
+            <div class="face-guide" id="guide" aria-hidden="true"><div class="oval"></div></div>
+            <div class="scanline" id="scan" aria-hidden="true"></div>
+            <div class="stage-top">
+              <span class="live"><span class="p"></span> <span id="liveTxt">LIVE</span></span>
+              <div class="shots" id="shots" aria-label="Photo progress">
+                <span class="shot cur">F</span><span class="shot">L</span><span class="shot">R</span>
+              </div>
+            </div>
+            <div class="veil" id="veil">
+              <div>
+                <div class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
+                <h3 style="font-size:22px;margin-bottom:8px" id="veilTitle">Camera access needed</h3>
+                <p style="font-size:14px;max-width:30ch;margin:0 auto 18px" id="veilMsg">Allow camera access to scan your skin. Nothing is recorded or uploaded without your permission.</p>
+                <button class="btn btn-primary" id="camBtn">Enable camera</button>
+                <div><button class="link-btn" id="skipPhotos2">Answer questions only</button></div>
+              </div>
+            </div>
+            <div class="stage-bot">
+              <span class="guidance" id="guidance">Getting ready</span>
+              <button class="shutter" id="shutter" disabled aria-label="Take photo">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.4" fill="currentColor" stroke="none"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 ANALYSING -->
+    <section class="panel" id="p-analyzing" aria-labelledby="h-analyzing">
+      <div class="grid2">
+        <div>
+          <span class="eyebrow">Reading your skin</span>
+          <h2 class="h-lead" id="h-analyzing" style="font-size:clamp(28px,4vw,48px);margin-top:16px">One <em>moment</em>.</h2>
+          <p class="sub" style="margin-top:18px;max-width:40ch">We are assessing hydration, oil balance, tone and texture across your three photos.</p>
+          <div class="readout">
+            <div class="bar2"><div class="bl"><span>Face detection</span><span id="aq1">...</span></div><div class="meter"><i id="ab1"></i></div></div>
+            <div class="bar2"><div class="bl"><span>Skin mapping</span><span id="aq2">...</span></div><div class="meter"><i id="ab2"></i></div></div>
+            <div class="bar2"><div class="bl"><span>Matching formulas</span><span id="aq3">...</span></div><div class="meter"><i id="ab3"></i></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="stage">
+            <canvas class="snap" id="preview"></canvas>
+            <div class="face-guide good" aria-hidden="true"><div class="oval"></div></div>
+            <div class="scanline on" aria-hidden="true"></div>
+            <div class="stage-top"><span class="live"><span class="p"></span> ANALYSING</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 QUESTIONS -->
+    <section class="panel" id="p-questions" aria-labelledby="qText">
+      <div class="qcard">
+        <div class="qprog" id="qProg">Question 1 of 4</div>
+        <h3 id="qText"></h3>
+        <p class="qhelp">Your answer helps us recommend with more confidence.</p>
+        <div class="opts" id="qOpts"></div>
+        <button class="qback" id="qBack" hidden><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 6l-6 6 6 6"/></svg> Back</button>
+      </div>
+    </section>
+
+    <!-- 5 RESULTS -->
+    <section class="panel" id="p-results" aria-labelledby="h-res">
+      <div class="res-head">
+        <div>
+          <span class="eyebrow">Your results</span>
+          <h2 class="h-lead" id="h-res" style="font-size:clamp(28px,4vw,48px);margin-top:14px">Here is what<br/>your <em>skin</em> told us.</h2>
+        </div>
+        <div class="conf">
+          <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+            <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(23,149,135,.15)" stroke-width="3.5"/>
+            <circle id="confArc" cx="20" cy="20" r="16" fill="none" stroke="#179587" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="100.5" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset 1.2s cubic-bezier(.22,.61,.36,1)"/>
+          </svg>
+          <div><div class="n" id="confN">0%</div><div class="l">Confidence</div></div>
+        </div>
+      </div>
+
+      <h4 class="sec-h">What we noticed</h4>
+      <div class="concerns" id="concerns"></div>
+
+      <h4 class="sec-h">Your routine</h4>
+      <div class="routine" id="routine"></div>
+
+      <div class="total">
+        <div><div class="l">Full routine</div><div class="t" id="total">PKR 0</div></div>
+        <button class="btn btn-primary" id="addAll">Add routine to bag <span class="arrow">→</span></button>
+      </div>
+      <div class="res-foot"><button class="btn btn-ghost" id="restart">Start over</button></div>
+
+      <div class="disclaimer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+        <span id="discTxt">These suggestions are cosmetic and educational, not a medical diagnosis. If a concern is painful, spreading or persistent, please consult a dermatologist.</span>
+      </div>
+    </section>
+
+    <!-- 6 ESCALATION -->
+    <section class="panel" id="p-escalate" aria-labelledby="h-esc">
+      <div class="esc">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="M12 9v4M12 16h.01"/></svg></div>
+        <h3 id="h-esc">Please see a dermatologist first.</h3>
+        <p id="escTxt">Some of what you have described is better assessed in person than by a skin scan. We recommend seeing a dermatologist before starting any treatment.</p>
+        <p style="font-size:14px;color:var(--muted)">We are not showing product suggestions here. The right next step is a professional opinion.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="#" id="escFind" target="_blank" rel="noopener">Find a dermatologist <span class="arrow">→</span></a>
+          <button class="btn btn-ghost" id="escRestart">Start over</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<div class="trust"><div class="wrap row">
+  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg> Made by Quality Pharma</div>
+  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Photos deleted within 24 hours</div>
+  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg> Cosmetic guidance, not a diagnosis</div>
+  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg> Only the products you need</div>
+</div></div>
+<footer class="foot"><div class="wrap row">
+  <span>© Quality SkinCare · Made in Pakistan</span>
+  <a href="https://instagram.com/qualityskincare_" target="_blank" rel="noopener">@qualityskincare_</a>
+</div></footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg><span id="toastMsg">Added to bag</span></div>
+<div class="sr" id="live" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* Quality SkinCare — Skin Analyser client.
+ *
+ * Served by the same Next.js app as /api/skin, so the API base is relative and
+ * no CORS grant is involved.
+ *
+ * There is deliberately NO scoring, routing or safety logic in this file.
+ * A browser-side copy would drift from /lib and could show products to someone
+ * the server would have referred to a dermatologist — which is exactly the bug
+ * the triage fix closed. Every route decision, every product, every timeline
+ * and every disclaimer comes from the API.
+ */
+const API = "/api/skin";
+const DERM_URL = "https://www.marham.pk/doctors/dermatologist";
+
+/* Presentation only, keyed by the engine's SKUs (lib/reco/catalog.ts).
+ * The engine decides WHICH products appear; this decides how they look.
+ * ScabQ (QSC-STS) and FungZap (QSC-AFS) are medical treatments the engine
+ * never recommends from a scan, so they are absent here too. */
+const CATALOG = {
+  "QSC-AAFW":  { name:"Q-Bellez Acne Face Wash",          size:"120ml", price:800,  img:"assets/qb-acne-facewash.png",        variantId:null, inStock:true },
+  "QSC-AAC":   { name:"Q-Bellez Acne Cream",              size:"30g",   price:680,  img:"assets/qb-acne-cream.png",           variantId:null, inStock:true },
+  "QSC-AAS":   { name:"Q-Bellez Acne Soap Bar",           size:"75g",   price:280,  img:"assets/qb-acne-soap.png",            variantId:null, inStock:true },
+  "QSC-BFW":   { name:"Beauty Kit Brightening Face Wash", size:"120ml", price:1250, img:"assets/bk-brightening-facewash.png", variantId:null, inStock:true },
+  "QSC-BC":    { name:"Beauty Kit Brightening Cream",     size:"40g",   price:1600, img:"assets/bk-brightening-cream.png",    variantId:null, inStock:true },
+  "QSC-NC":    { name:"Beauty Kit Night Cream",           size:"40g",   price:1500, img:"assets/bk-night-cream.png",          variantId:null, inStock:true },
+  "QSC-BS":    { name:"Beauty Kit Brightening Soap Bar",  size:"75g",   price:550,  img:"assets/bk-brightening-soap.png",     variantId:null, inStock:true },
+  "QSC-SPF50": { name:"R&K Sunblock SPF 50",              size:"40g",   price:1200, img:"assets/rk-sunblock.png",             variantId:null, inStock:true }
+};
+
+/* Engine ConcernKey → shelf language. Mirrors lib/vision/types.ts. */
+const PHRASE = {
+  acne:"Active breakouts", acne_scars:"Marks left by breakouts",
+  hyperpigmentation:"Uneven dark patches", uneven_tone:"Uneven tone",
+  dark_spots:"Dark spots", fine_lines:"Fine lines", wrinkles:"Wrinkles",
+  enlarged_pores:"Visible pores", redness:"Redness", dry_patches:"Dry, tight areas",
+  excess_oil:"Excess oil", dehydration:"Dehydration", dullness:"Dullness",
+  sun_damage:"Sun exposure", dark_circles:"Dark circles"
+};
+const SLOT = { cleanser:"Cleanse", treatment:"Treat", moisturizer:"Nourish", sunscreen:"Protect" };
+
+const pkr = n => "PKR " + Number(n || 0).toLocaleString("en-PK");
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g,
+  c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const live = m => { $("#live").textContent = m; };
+let tT;
+function toast(msg){ $("#toastMsg").textContent = msg; $("#toast").classList.add("show"); clearTimeout(tT); tT = setTimeout(()=>$("#toast").classList.remove("show"), 2400); }
+
+const STEP_OF = { consent:1, capture:2, analyzing:2, questions:3, results:4, escalate:4 };
+function show(name){
+  $$(".panel").forEach(p => p.classList.remove("on"));
+  $("#p-"+name).classList.add("on");
+  const s = STEP_OF[name];
+  $$("#stepper .st").forEach(el => { const n = +el.dataset.s; el.classList.toggle("on", n === s); el.classList.toggle("done", n < s); });
+  window.scrollTo({ top:0, behavior:"smooth" });
+}
+
+/* ── API ──────────────────────────────────────────────────────────────── */
+class ApiError extends Error { constructor(status, msg){ super(msg); this.status = status; } }
+
+async function call(path, opts){
+  const o = opts || {};
+  const method = o.method || (o.body === undefined ? "GET" : "POST");
+  const r = await fetch(API + path, {
+    method,
+    headers: {
+      ...(o.body !== undefined ? { "Content-Type":"application/json" } : {}),
+      ...(S.token ? { Authorization:`Bearer ${S.token}` } : {})
+    },
+    body: o.body !== undefined ? JSON.stringify(o.body) : undefined
+  });
+  let data = null;
+  try { data = await r.json(); } catch(e){ /* 204s and empty bodies */ }
+  if (!r.ok) throw new ApiError(r.status, (data && data.error) || ("Request failed (" + r.status + ")"));
+  return data || {};
+}
+
+/* Server messages are written for people, so show them rather than a generic
+   line. Keep the detail in the console for whoever is debugging. */
+function fail(err, fallback){
+  console.error(err);
+  toast(err instanceof ApiError && err.message ? err.message : fallback);
+}
+
+const S = { token:null, frames:{}, shot:0, questions:[], qi:0, round:{}, photos:true, result:null };
+const SHOTS = [
+  { key:"front", word:"front", help:"Face the camera straight on. Fill the oval, hold still and keep the light in front of you." },
+  { key:"left",  word:"left side", help:"Turn your head slowly to your left until we can see the side of your face." },
+  { key:"right", word:"right side", help:"Now turn to your right. Same distance, same light." }
+];
+
+/* The "answer questions only" path is hidden rather than deleted. The API will
+   not serve questions before an analysis exists (/questions and /answer return
+   409 "no analysis yet — POST /api/skin/analyze first"), so a no-camera route
+   needs a server endpoint that does not exist. Offering the button would 409. */
+["#skipPhotos", "#skipPhotos2"].forEach(sel => { const el = $(sel); if (el) el.hidden = true; });
+
+/* ── Consent ──────────────────────────────────────────────────────────── */
+$("#cs").addEventListener("change", e => { $("#startBtn").disabled = !e.target.checked; });
+$("#startBtn").addEventListener("click", async () => {
+  $("#startBtn").disabled = true; $("#startBtn").textContent = "Starting";
+  try {
+    const s = await call("/session", { method:"POST" });
+    S.token = s.token;
+    await call("/consent", { body:{ scope:["image_analysis", "store_results"] } });
+    S.photos = true;
+    show("capture"); startCamera();
+  } catch(e){ resetStart(); fail(e, "Could not start. Please try again."); }
+});
+function resetStart(){ $("#startBtn").disabled = !$("#cs").checked; $("#startBtn").innerHTML = 'Start my analysis <span class="arrow">→</span>'; }
+
+/* ── Camera ───────────────────────────────────────────────────────────── */
+let stream = null, qTimer = null;
+async function startCamera(){
+  const v = $("#video");
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user", width:{ ideal:1280 }, height:{ ideal:1280 } }, audio:false });
+    v.srcObject = stream; await v.play();
+    $("#veil").classList.add("hide"); $("#scan").classList.add("on");
+    setShot(0); qTimer = setInterval(quality, 380);
+  } catch(err){
+    $("#veilTitle").textContent = "Camera blocked";
+    $("#veilMsg").textContent = "We cannot reach your camera. Check the permission in your browser's address bar and try again.";
+    $("#camBtn").textContent = "Try again";
+  }
+}
+$("#camBtn").addEventListener("click", startCamera);
+function setShot(i){
+  S.shot = i; const s = SHOTS[i];
+  $("#shotWord").textContent = s.word; $("#shotHelp").textContent = s.help;
+  $$("#shots .shot").forEach((el,n) => { el.classList.toggle("done", n < i); el.classList.toggle("cur", n === i); });
+  live(`Photo ${i+1} of 3: ${s.word}`);
+}
+
+/* Live quality check: lighting, sharpness, framing. Runs entirely on device —
+   nothing leaves the browser until the shutter is pressed. */
+const QC = document.createElement("canvas"); QC.width = 160; QC.height = 160;
+const qx = QC.getContext("2d", { willReadFrequently:true });
+let ok = false;
+function quality(){
+  const v = $("#video"); if (!v.videoWidth) return;
+  qx.drawImage(v, 0, 0, 160, 160);
+  const d = qx.getImageData(0, 0, 160, 160).data, g = new Float32Array(25600);
+  let sum = 0;
+  for (let i = 0, p = 0; i < d.length; i += 4, p++){ const y = .299*d[i] + .587*d[i+1] + .114*d[i+2]; g[p] = y; sum += y; }
+  const luma = sum / g.length, at = (x,y) => g[y*160 + x];
+  let ls = 0, lss = 0, n = 0;
+  for (let y = 1; y < 159; y++) for (let x = 1; x < 159; x++){ const l = 4*at(x,y) - at(x-1,y) - at(x+1,y) - at(x,y-1) - at(x,y+1); ls += l; lss += l*l; n++; }
+  const blurVar = lss/n - (ls/n)**2;
+  let ci = 0, cn = 0, ei = 0, en = 0;
+  for (let y = 0; y < 160; y++) for (let x = 0; x < 160; x++){ if (((x-80)/46)**2 + ((y-80)/56)**2 < 1){ ci += at(x,y); cn++; } else { ei += at(x,y); en++; } }
+  const framing = Math.min(1, Math.abs(ci/cn - ei/en) / 26);
+  const lightScore = luma < 60 || luma > 205 ? .25 : Math.min(1, 1 - Math.abs(luma - 138)/86);
+  const sharpScore = Math.min(1, blurVar / 130);
+  bar("#bLight","#mLight", lightScore); bar("#bBlur","#mBlur", sharpScore); bar("#bFrame","#mFrame", framing);
+  let msg = "Looking good. Hold still.", warn = true;
+  if (luma < 60) msg = "Too dark. Face a window or a lamp.";
+  else if (luma > 205) msg = "Too bright. Move out of direct light.";
+  else if (sharpScore < .45) msg = "A little blurry. Hold steady.";
+  else if (framing < .4) msg = "Move closer and fill the oval.";
+  else warn = false;
+  ok = !warn;
+  $("#guide").classList.toggle("good", ok);
+  $("#guidance").textContent = msg; $("#guidance").classList.toggle("warn", warn);
+  $("#shutter").disabled = !ok; $("#liveTxt").textContent = ok ? "READY" : "ADJUST";
+}
+function bar(b, t, v){ $(b).style.width = Math.round(v*100) + "%"; $(t).textContent = Math.round(v*100) + "%"; }
+
+$("#shutter").addEventListener("click", () => {
+  if (!ok) return;
+  const v = $("#video"), c = document.createElement("canvas"), size = Math.min(v.videoWidth, v.videoHeight);
+  c.width = c.height = size;
+  c.getContext("2d").drawImage(v, (v.videoWidth-size)/2, (v.videoHeight-size)/2, size, size, 0, 0, size, size);
+  const key = SHOTS[S.shot].key;
+  S.frames[key] = c.toDataURL("image/jpeg", .9);
+  if (key === "front"){ const p = $("#preview"); p.width = p.height = 600; p.getContext("2d").drawImage(c, 0, 0, 600, 600); }
+  const f = document.createElement("div");
+  f.style.cssText = "position:absolute;inset:0;background:#fff;z-index:9;opacity:.85;transition:opacity .45s";
+  $("#stage").appendChild(f); requestAnimationFrame(() => { f.style.opacity = "0"; }); setTimeout(() => f.remove(), 500);
+  if (S.shot < 2){ setShot(S.shot + 1); toast(`Photo ${S.shot} saved`); }
+  else { stopCamera(); analyze(); }
+});
+function stopCamera(){ clearInterval(qTimer); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+
+/* ── Analyse ──────────────────────────────────────────────────────────── */
+async function analyze(){
+  show("analyzing");
+  const stages = [["#ab1","#aq1",700], ["#ab2","#aq2",1500], ["#ab3","#aq3",2400]];
+  const timers = stages.map(([b,q,d]) => setTimeout(() => { $(b).style.width = "100%"; $(q).textContent = "Done"; }, d));
+  const done = () => { timers.forEach(clearTimeout); stages.forEach(([b,q]) => { $(b).style.width = "100%"; $(q).textContent = "Done"; }); };
+  try {
+    const data = await call("/analyze", { body:{ frames:S.frames } });
+    done();
+    routeFrom(data);
+  } catch(e){
+    done();
+    fail(e, "We could not read your photos. Please try again.");
+    show("consent"); resetStart();
+  }
+}
+
+/* The server owns the state machine. A response is one of:
+   · route ESCALATE          → referral, no products, flow over
+   · questions present       → another round to ask (TRIAGE, then CLARIFY/CONSULT)
+   · no questions            → ready for /recommend
+   The consultation runs TWO rounds: the safety triage first, then the main
+   consult. Assuming a single round is what used to skip the second one. */
+function routeFrom(data){
+  if (data.route === "ESCALATE") return escalate(data);
+  const qs = data.questions || [];
+  if (qs.length){
+    S.questions = qs; S.qi = 0; S.round = {};
+    renderQ(); return show("questions");
+  }
+  return recommend();
+}
+
+/* ── Questions ────────────────────────────────────────────────────────── */
+function renderQ(){
+  const q = S.questions[S.qi];
+  $("#qProg").textContent = `Question ${S.qi+1} of ${S.questions.length}`;
+  $("#qText").textContent = q.text;
+  $("#qBack").hidden = S.qi === 0;
+  const box = $("#qOpts"); box.innerHTML = "";
+  q.options.forEach(o => {
+    const b = document.createElement("button"); b.className = "opt"; b.type = "button";
+    b.innerHTML = `<span class="rad"></span><span>${esc(o.label)}</span>`;
+    b.addEventListener("click", () => answer(q.id, o.value));
+    box.appendChild(b);
+  });
+  live(q.text);
+}
+$("#qBack").addEventListener("click", () => { if (S.qi > 0){ S.qi--; renderQ(); } });
+
+/* Only the CURRENT round's answers are submitted. The server rejects any
+   question that is not pending right now, so resending earlier rounds 400s. */
+async function answer(qid, value){
+  S.round[qid] = value;
+  if (S.qi < S.questions.length - 1){ S.qi++; return renderQ(); }
+  $$("#qOpts .opt").forEach(b => { b.disabled = true; });
+  try {
+    const data = await call("/answer", { body:{ answers:S.round } });
+    S.round = {};
+    routeFrom(data);
+  } catch(e){
+    $$("#qOpts .opt").forEach(b => { b.disabled = false; });
+    fail(e, "We could not save your answers. Please try again.");
+  }
+}
+
+/* ── Results ──────────────────────────────────────────────────────────── */
+async function recommend(){
+  let data;
+  try { data = await call("/recommend", { method:"POST" }); }
+  catch(e){ return fail(e, "Could not build your routine. Please try again."); }
+  if (data.route === "ESCALATE") return escalate(data);
+  S.result = data;
+
+  const pct = Math.round((data.confidence || 0) * 100);
+  $("#confN").textContent = pct + "%";
+  setTimeout(() => { $("#confArc").style.strokeDashoffset = String(100.5 * (1 - pct/100)); }, 240);
+
+  const cbox = $("#concerns"); cbox.innerHTML = "";
+  (data.concerns || []).slice().sort((a,b) => b.severity - a.severity).forEach((c, i) => {
+    const sev = c.severity, lvl = sev > .6 ? "high" : sev > .35 ? "mid" : "", txt = sev > .6 ? "Noticeable" : sev > .35 ? "Moderate" : "Mild";
+    const el = document.createElement("div"); el.className = "cn";
+    el.innerHTML = `<div class="cn-top"><span class="cn-name">${esc(PHRASE[c.key] || c.key)}</span><span class="cn-badge ${lvl}">${txt}</span></div><div class="cn-meter"><i></i></div>`;
+    cbox.appendChild(el);
+    setTimeout(() => { el.querySelector("i").style.width = Math.round(sev*100) + "%"; }, 200 + i*110);
+  });
+
+  const rbox = $("#routine"); rbox.innerHTML = ""; let total = 0;
+  (data.routine || []).forEach((item, i) => {
+    const p = CATALOG[item.sku];
+    const name = p ? p.name : (item.name || item.sku);
+    const sellable = !!p && p.inStock !== false;
+    if (sellable) total += p.price || 0;
+    const when = item.when === "am" ? "Morning" : item.when === "pm" ? "Night" : "Morning and night";
+    const cautions = (item.cautions || []).map(c => `<div class="caut">${esc(c)}</div>`).join("");
+
+    /* A SKU the engine recommends but this page has no price for still shows,
+       without a buy button. Silently dropping a product the engine chose would
+       hide a catalog mismatch instead of surfacing it. */
+    const buy = !p
+      ? `<span class="rx-size">Ask in store</span>`
+      : p.inStock === false
+        ? `<span class="rx-size" style="color:var(--clay)">Out of stock</span>`
+        : `<div style="display:grid;justify-items:inherit"><span class="rx-price">${pkr(p.price)}</span><span class="rx-size">${esc(p.size)}</span></div>
+           <button class="btn btn-primary add" type="button" data-sku="${esc(item.sku)}" style="padding:11px 20px;font-size:13.5px">Add to bag</button>`;
+
+    const el = document.createElement("article"); el.className = "rx";
+    el.innerHTML = `
+      <div class="rx-img">${p && p.img ? `<img src="${esc(p.img)}" alt="${esc(name)}" loading="lazy"/>` : ""}</div>
+      <div>
+        <div class="rx-slot">Step ${i+1} · ${esc(SLOT[item.slot] || item.slot)} <span class="rx-when">${when}</span></div>
+        <h4>${esc(name)}</h4>
+        <div class="why">${esc(item.explanation)}</div>
+        ${cautions}
+        <div class="tl">${esc(item.timeline)}</div>
+      </div>
+      <div class="rx-buy">${buy}</div>`;
+    rbox.appendChild(el);
+  });
+
+  $("#total").textContent = pkr(total);
+  if (data.disclaimer) $("#discTxt").textContent = data.disclaimer;
+  rbox.querySelectorAll(".add").forEach(b => b.addEventListener("click", () => addToCart([b.dataset.sku], CATALOG[b.dataset.sku].name + " added to bag")));
+  show("results");
+  live("Your routine is ready.");
+}
+$("#addAll").addEventListener("click", () => {
+  if (!S.result) return;
+  addToCart(S.result.routine.filter(i => CATALOG[i.sku] && CATALOG[i.sku].inStock !== false).map(i => i.sku), "Routine added to bag");
+});
+
+/* Shopify AJAX cart. Until variant IDs are filled in, this reports a preview
+   rather than pretending something was added. */
+async function addToCart(skus, msg){
+  const items = skus.map(s => CATALOG[s] && CATALOG[s].variantId).filter(Boolean).map(id => ({ id, quantity:1 }));
+  if (!items.length) return toast(msg + " (preview)");
+  try {
+    const r = await fetch("/cart/add.js", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ items }) });
+    if (!r.ok) throw new Error("cart rejected");
+    toast(msg);
+  } catch(e){ toast(msg + " (preview)"); }
+}
+
+/* ── Escalation ───────────────────────────────────────────────────────── */
+$("#escFind").href = DERM_URL;
+function escalate(data){
+  stopCamera();
+  if (data && data.disclaimer) $("#escTxt").textContent = data.disclaimer;
+  show("escalate"); live("We recommend seeing a dermatologist.");
+}
+
+function restart(){
+  stopCamera();
+  Object.assign(S, { token:null, frames:{}, shot:0, questions:[], qi:0, round:{}, photos:true, result:null });
+  $("#cs").checked = false; resetStart();
+  $("#veil").classList.remove("hide");
+  $("#veilTitle").textContent = "Camera access needed"; $("#camBtn").textContent = "Enable camera";
+  $("#confArc").style.strokeDashoffset = "100.5";
+  ["#ab1","#ab2","#ab3"].forEach(b => $(b).style.width = "0");
+  ["#aq1","#aq2","#aq3"].forEach(q => $(q).textContent = "...");
+  show("consent");
+}
+$("#escRestart").addEventListener("click", restart);
+$("#restart").addEventListener("click", restart);
+</script>
+</body></html>
