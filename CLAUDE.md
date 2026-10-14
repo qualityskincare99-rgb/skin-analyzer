@@ -29,6 +29,12 @@ not cosmetic concerns a webcam can assess.
 - No code path may recommend them from image analysis.
 - The only route near them is an explicit symptom screen that ends in a
   **dermatologist referral**, never an add-to-cart.
+- That screen (`persistent_itch`, `spreading_rash`) runs in **triage on every
+  consultation, unconditionally**. Do not gate it on a vision signal. It was
+  once gated on `redness.severity > 0.3`, which meant any assessment without
+  detected redness skipped the screen entirely and went straight to products —
+  and redness is the least reliable signal on Fitzpatrick IV–VI skin.
+  `scripts/e2e.ts` scenario F guards this; do not weaken it.
 - If you are ever tempted to "just let the engine consider them," stop and ask.
 
 ### 2. This is not a medical device

@@ -54,7 +54,9 @@ export const QUESTION_BANK: Question[] = [
       { label: 'Recent', value: 'recent', effects: { dark_spots: { dConf: +0.1 } } },
     ] },
 
-  // Safety-screen questions — used ONLY in the full consult; route to escalation.
+  // Safety-screen questions — asked in TRIAGE on every consultation (see
+  // questions/triage.ts); route to escalation, never to a product.
+  // selectQuestions() excludes them from the main consult by targets.length.
   { id: 'persistent_itch', text: 'Do you have a persistent itch that keeps coming back?',
     targets: [],
     options: [

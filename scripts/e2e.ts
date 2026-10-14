@@ -130,6 +130,16 @@ async function startConsult(preset: SkinAssessment): Promise<{ token: string; an
   return { token, analyze };
 }
 
+/** The two fungal/parasitic screens now run on EVERY consult, so every session
+ *  opens in TRIAGE. Answer both 'no' to reach the main consult. Neither 'no'
+ *  option carries `effects`, so the assessment is untouched. */
+async function clearSafetyScreens(token: string): Promise<ApiResponse> {
+  return api('POST', '/answer', {
+    token,
+    body: { answers: { persistent_itch: 'no', spreading_rash: 'no' } },
+  });
+}
+
 const skus = (routine: any[]) => routine.map(r => r.sku);
 const scores = (routine: any[]) => routine.map(r => r.score);
 const allRoutines: any[][] = [];
@@ -139,15 +149,21 @@ const allRoutines: any[][] = [];
 async function scenarioA(): Promise<void> {
   console.log('\nScenario A · oily + acne, high confidence → straight RECOMMEND');
   const { token, analyze } = await startConsult(PRESET_A);
-  eq('analyze → state RECOMMEND', analyze.json.state, 'RECOMMEND');
-  eq('analyze → confidence 0.916', analyze.json.confidence, 0.916);
-  eq('analyze → no questions', analyze.json.questions, []);
+  eq('analyze → state TRIAGE (safety screens always run)', analyze.json.state, 'TRIAGE');
+  eq('triage is the two safety screens', analyze.json.questions.map((q: any) => q.id),
+    ['persistent_itch', 'spreading_rash']);
+
+  const cleared = await clearSafetyScreens(token);
+  eq('screens cleared → state RECOMMEND', cleared.json.state, 'RECOMMEND');
+  eq('screens do not shift confidence', cleared.json.confidence, 0.916);
+  eq('no further questions', cleared.json.questions, []);
 
   const rec = await api('POST', '/recommend', { token });
   eq('recommend → 200', rec.status, 200);
   eq('recommend → route RECOMMEND', rec.json.route, 'RECOMMEND');
   eq('recommend → confidence 0.916', rec.json.confidence, 0.916);
-  eq('recommend → questionsAsked empty', rec.json.questionsAsked, []);
+  eq('recommend → questionsAsked is the screens', rec.json.questionsAsked,
+    ['persistent_itch', 'spreading_rash']);
   eq('routine SKUs match engine demo', skus(rec.json.routine), ['QSC-AAFW', 'QSC-AAC', 'QSC-SPF50']);
   eq('routine scores match engine demo', scores(rec.json.routine), [1.176, 0.497, 0.269]);
   check('cosmetic disclaimer present', String(rec.json.disclaimer).startsWith('These suggestions are cosmetic'));
@@ -160,19 +176,22 @@ async function scenarioA(): Promise<void> {
 async function scenarioB(): Promise<void> {
   console.log('\nScenario B · pigmentation + dryness → CLARIFY, answer, RECOMMEND');
   const { token, analyze } = await startConsult(PRESET_B);
-  eq('analyze → state CLARIFY', analyze.json.state, 'CLARIFY');
-  eq('analyze → 3 questions in selection order',
-    analyze.json.questions.map((q: any) => q.id),
+  eq('analyze → state TRIAGE (safety screens always run)', analyze.json.state, 'TRIAGE');
+
+  const cleared = await clearSafetyScreens(token);
+  eq('screens cleared → state CLARIFY', cleared.json.state, 'CLARIFY');
+  eq('→ 3 questions in selection order',
+    cleared.json.questions.map((q: any) => q.id),
     ['dark_marks_duration', 'acne_painful', 'tight_after_cleanse']);
   check('questions carry no scoring internals',
-    analyze.json.questions.every((q: any) =>
+    cleared.json.questions.every((q: any) =>
       !('effects' in q) && !('targets' in q)
       && q.options.every((o: any) => !('effects' in o) && !('safetyScreen' in o))));
 
   const questions = await api('GET', '/questions', { token });
-  eq('GET /questions matches analyze payload',
+  eq('GET /questions matches answer payload',
     questions.json.questions.map((q: any) => q.id),
-    analyze.json.questions.map((q: any) => q.id));
+    cleared.json.questions.map((q: any) => q.id));
 
   const answer = await api('POST', '/answer', {
     token,
@@ -185,8 +204,9 @@ async function scenarioB(): Promise<void> {
   eq('recommend → confidence 0.835', rec.json.confidence, 0.835);
   eq('routine SKUs match engine demo', skus(rec.json.routine), ['QSC-BC', 'QSC-SPF50', 'QSC-NC']);
   eq('routine scores match engine demo', scores(rec.json.routine), [1.161, 0.662, 0.545]);
-  eq('questionsAsked matches engine demo', rec.json.questionsAsked,
-    ['dark_marks_duration', 'acne_painful', 'tight_after_cleanse']);
+  eq('questionsAsked is screens + main round', rec.json.questionsAsked,
+    ['persistent_itch', 'spreading_rash',
+     'dark_marks_duration', 'acne_painful', 'tight_after_cleanse']);
   check('no cleanser slot (redundancy guard, the open business question)',
     rec.json.routine.every((r: any) => r.slot !== 'cleanser'));
   allRoutines.push(rec.json.routine);
@@ -196,14 +216,17 @@ async function scenarioC(): Promise<void> {
   console.log('\nScenario C · severe acne, painful → ESCALATE from triage');
   const { token, analyze } = await startConsult(PRESET_C);
   eq('analyze → state TRIAGE', analyze.json.state, 'TRIAGE');
-  eq('triage asks the pain question first', analyze.json.questions.map((q: any) => q.id), ['acne_painful']);
+  eq('triage asks the pain question first, then the screens',
+    analyze.json.questions.map((q: any) => q.id),
+    ['acne_painful', 'persistent_itch', 'spreading_rash']);
 
   const answer = await api('POST', '/answer', { token, body: { answers: { acne_painful: 'severe' } } });
   eq('answer → route ESCALATE', answer.json.route, 'ESCALATE');
   eq('escalation reason SEVERE_ACNE', answer.json.escalationReason, 'SEVERE_ACNE');
   eq('confidence zeroed', answer.json.confidence, 0);
   eq('zero products', answer.json.routine, []);
-  eq('questionsAsked matches engine demo', answer.json.questionsAsked, ['acne_painful']);
+  eq('questionsAsked is the full triage batch', answer.json.questionsAsked,
+    ['acne_painful', 'persistent_itch', 'spreading_rash']);
   check('derm referral message', String(answer.json.disclaimer).includes('dermatologist'));
   allRoutines.push(answer.json.routine);
 
@@ -239,6 +262,29 @@ async function scenarioE(): Promise<void> {
   eq('no questions ever asked', analyze.json.questionsAsked, []);
   eq('zero products', analyze.json.routine, []);
   allRoutines.push(analyze.json.routine);
+}
+
+async function scenarioF(): Promise<void> {
+  console.log('\nScenario F · itch screen fires with NO redness signal (regression)');
+  // REGRESSION GUARD. PRESET_A carries no redness concern at all. The screens
+  // used to be gated on `redness.severity > 0.3` in triageQuestions, so this
+  // assessment was never asked about itch or rash and went straight to
+  // products — the fungal/parasitic referral path was unreachable for it.
+  // Scenario D only ever covered the redness-present case and passed anyway.
+  const { token, analyze } = await startConsult(PRESET_A);
+  eq('no-redness assessment still triages', analyze.json.state, 'TRIAGE');
+  eq('both safety screens asked', analyze.json.questions.map((q: any) => q.id),
+    ['persistent_itch', 'spreading_rash']);
+
+  const answer = await api('POST', '/answer', { token, body: { answers: { persistent_itch: 'yes' } } });
+  eq('answer → route ESCALATE', answer.json.route, 'ESCALATE');
+  eq('escalation reason REFER_ITCH', answer.json.escalationReason, 'REFER_ITCH');
+  eq('zero products', answer.json.routine, []);
+  check('derm referral message', String(answer.json.disclaimer).includes('dermatologist'));
+  allRoutines.push(answer.json.routine);
+
+  const rec = await api('POST', '/recommend', { token });
+  eq('recommend after escalation → 409', rec.status, 409);
 }
 
 async function guards(): Promise<void> {
@@ -337,6 +383,7 @@ async function main(): Promise<void> {
     await scenarioC();
     await scenarioD();
     await scenarioE();
+    await scenarioF();
     await guards();
 
     console.log('\nInvariant · hard-gated medical SKUs');

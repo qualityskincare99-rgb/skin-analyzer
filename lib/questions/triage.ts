@@ -14,11 +14,15 @@ export function triageQuestions(a: SkinAssessment): Question[] {
   if (acne && acne.severity > 0.8)
     qs.push(QUESTION_BANK.find(q => q.id === 'acne_painful')!);
 
-  // Redness/irritation with no clear cosmetic explanation → screen for
-  // fungal/parasitic. NOT asked of everyone; only when the image hints at it.
-  const redness = a.concerns.find(c => c.key === 'redness');
-  if (redness && redness.severity > 0.3)
-    qs.push(...QUESTION_BANK.filter(q => q.targets.length === 0));
+  // Fungal/parasitic screen. Asked on EVERY consultation, unconditionally.
+  //
+  // This is the only path to the dermatologist referral for scabies/fungal
+  // presentation, and it must not depend on a vision signal. Gating it on
+  // detected redness meant a user whose assessment returned no redness was
+  // never asked and went straight to products — and redness detection is
+  // least reliable on exactly the Fitzpatrick IV-VI skin this serves.
+  // Two extra questions on every consult is the price of that guarantee.
+  qs.push(...QUESTION_BANK.filter(q => q.targets.length === 0));
 
   return qs;
 }
