@@ -166,6 +166,11 @@ async function scenarioA(): Promise<void> {
     ['persistent_itch', 'spreading_rash']);
   eq('routine SKUs match engine demo', skus(rec.json.routine), ['QSC-AAFW', 'QSC-AAC', 'QSC-SPF50']);
   eq('routine scores match engine demo', scores(rec.json.routine), [1.176, 0.497, 0.269]);
+  // The results panel renders "What we noticed" from this. Without it the
+  // section silently renders empty, which is how it shipped before.
+  eq('recommend returns the scored concerns',
+    (rec.json.concerns ?? []).map((c: any) => c.key),
+    ['acne', 'excess_oil', 'enlarged_pores', 'hyperpigmentation']);
   check('cosmetic disclaimer present', String(rec.json.disclaimer).startsWith('These suggestions are cosmetic'));
   allRoutines.push(rec.json.routine);
 
@@ -287,6 +292,48 @@ async function scenarioF(): Promise<void> {
   eq('recommend after escalation → 409', rec.status, 409);
 }
 
+async function scenarioG(): Promise<void> {
+  console.log('\nScenario G · the UI path: frames posted, no mockAssessment');
+  // Every other scenario injects an assessment through the test seam. This one
+  // sends what public/analyzer/index.html actually sends — captured frames and
+  // nothing else — so the browser's real request shape is covered.
+  const { token } = await newSession();
+  eq('consent → 201',
+    (await api('POST', '/consent', { token, body: { scope: ['image_analysis'] } })).status, 201);
+
+  const analyze = await api('POST', '/analyze', {
+    token, body: { frames: { front: 'data:image/jpeg;base64,/9j/AA==' } },
+  });
+  eq('analyze with frames → 200', analyze.status, 200);
+  eq('no mockAssessment → DEMO_PRESET, still triages', analyze.json.state, 'TRIAGE');
+  eq('both safety screens asked', analyze.json.questions.map((q: any) => q.id),
+    ['persistent_itch', 'spreading_rash']);
+
+  // Drive the client's own loop: answer each pending round until none remain.
+  // This is the two-round state machine the page had wrong.
+  let data: any = (await clearSafetyScreens(token)).json;
+  let rounds = 1;
+  while (data.questions && data.questions.length && rounds < 5) {
+    const answers: Record<string, string> = {};
+    for (const q of data.questions) answers[q.id] = q.options[0].value;
+    data = (await api('POST', '/answer', { token, body: { answers } })).json;
+    rounds++;
+  }
+  eq('loop ends in RECOMMEND', data.state, 'RECOMMEND');
+  eq('exactly two answer rounds: triage then main', rounds, 2);
+
+  const rec = await api('POST', '/recommend', { token });
+  eq('recommend → 200', rec.status, 200);
+  check('concerns present and well formed',
+    Array.isArray(rec.json.concerns) && rec.json.concerns.length > 0
+    && rec.json.concerns.every((c: any) =>
+      typeof c.key === 'string' && typeof c.severity === 'number' && typeof c.confidence === 'number'));
+  check('routine is non-empty', rec.json.routine.length > 0);
+  check('every routine SKU is one the page can price',
+    rec.json.routine.every((r: any) => /^QSC-/.test(r.sku)));
+  allRoutines.push(rec.json.routine);
+}
+
 async function guards(): Promise<void> {
   console.log('\nGuards · auth, consent, validation, CORS');
 
@@ -384,6 +431,7 @@ async function main(): Promise<void> {
     await scenarioD();
     await scenarioE();
     await scenarioF();
+    await scenarioG();
     await guards();
 
     console.log('\nInvariant · hard-gated medical SKUs');
