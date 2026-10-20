@@ -17,7 +17,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createRepo } from '../lib/db/repo';
 import type { SkinAssessment } from '../lib/vision/types';
 
@@ -34,6 +34,50 @@ const PORT = 4319;
 const API = `http://127.0.0.1:${PORT}/api/skin`;
 const ALLOWED_ORIGIN = 'https://quality-skincare.myshopify.com';
 const EVIL_ORIGIN = 'https://evil.example';
+/** Deterministic cron secret for the purge route; mirrored into serverEnv. */
+const CRON_SECRET = 'e2e-only-cron-secret-do-not-use-anywhere-else';
+
+/** Service-role client, for the two things the HTTP API deliberately cannot
+ *  do: backdate a retention window, and read rows back to prove a purge. */
+let adminClient: SupabaseClient | undefined;
+function admin(): SupabaseClient {
+  adminClient ??= createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } },
+  );
+  return adminClient;
+}
+
+/** Drag a session's retention window into the past so the purge sees it. */
+async function expireSession(sessionId: string): Promise<void> {
+  const { error } = await admin()
+    .from('sessions')
+    .update({ purge_after: new Date(Date.now() - 60_000).toISOString() })
+    .eq('id', sessionId);
+  if (error) throw new Error(`expireSession: ${error.message}`);
+}
+
+async function sessionExists(sessionId: string): Promise<boolean> {
+  const { data, error } = await admin()
+    .from('sessions').select('id').eq('id', sessionId).maybeSingle();
+  if (error) throw new Error(`sessionExists: ${error.message}`);
+  return data !== null;
+}
+
+async function feedbackRow(sessionId: string): Promise<Record<string, any> | null> {
+  const { data, error } = await admin()
+    .from('feedback').select('*').eq('session_id', sessionId).maybeSingle();
+  if (error) throw new Error(`feedbackRow: ${error.message}`);
+  return (data as Record<string, any> | null) ?? null;
+}
+
+async function purgeAuditActions(sessionId: string): Promise<string[]> {
+  const { data, error } = await admin()
+    .from('audit_log').select('meta').eq('session_id', sessionId).eq('event', 'PURGE');
+  if (error) throw new Error(`purgeAuditActions: ${error.message}`);
+  return (data as { meta: { action?: string } }[]).map(r => r.meta?.action ?? '?');
+}
 
 // ── Presets: verbatim from the skinEngine.ts demo ───────────────────────────
 
@@ -122,12 +166,12 @@ async function newSession(): Promise<{ sessionId: string; token: string }> {
   return r.json;
 }
 
-async function startConsult(preset: SkinAssessment): Promise<{ token: string; analyze: ApiResponse }> {
-  const { token } = await newSession();
+async function startConsult(preset: SkinAssessment): Promise<{ sessionId: string; token: string; analyze: ApiResponse }> {
+  const { sessionId, token } = await newSession();
   const consent = await api('POST', '/consent', { token, body: { scope: ['image_analysis', 'store_results'] } });
   if (consent.status !== 201) throw new Error(`POST /consent failed: ${consent.status}`);
   const analyze = await api('POST', '/analyze', { token, body: { mockAssessment: preset } });
-  return { token, analyze };
+  return { sessionId, token, analyze };
 }
 
 /** The two fungal/parasitic screens now run on EVERY consult, so every session
@@ -139,6 +183,16 @@ async function clearSafetyScreens(token: string): Promise<ApiResponse> {
     body: { answers: { persistent_itch: 'no', spreading_rash: 'no' } },
   });
 }
+
+/** The eight SKUs the page can price and sell. Anything the engine returns
+ *  outside this set is a catalog mismatch, not a routine. */
+const SELLABLE = new Set([
+  'QBELLEZ-ACNE-WASH', 'QBELLEZ-ACNE-CREAM', 'QBELLEZ-ACNE-SOAP',
+  'BEAUTY-KIT-BRIGHT-WASH', 'BEAUTY-KIT-BRIGHTENING', 'BEAUTY-KIT-NIGHT',
+  'BEAUTY-KIT-BRIGHT-SOAP', 'RK-SUNBLOCK-SPF50',
+]);
+/** Tagged `Regulated` in Shopify. Must never reach a routine. */
+const REGULATED = ['SCABQ-SOAP-75G', 'FUNGZAP-SOAP-75G', 'FWH-CREAM-15G', 'BLASROK-20MG-10TAB'];
 
 const skus = (routine: any[]) => routine.map(r => r.sku);
 const scores = (routine: any[]) => routine.map(r => r.score);
@@ -164,7 +218,7 @@ async function scenarioA(): Promise<void> {
   eq('recommend → confidence 0.916', rec.json.confidence, 0.916);
   eq('recommend → questionsAsked is the screens', rec.json.questionsAsked,
     ['persistent_itch', 'spreading_rash']);
-  eq('routine SKUs match engine demo', skus(rec.json.routine), ['QSC-AAFW', 'QSC-AAC', 'QSC-SPF50']);
+  eq('routine SKUs match engine demo', skus(rec.json.routine), ['QBELLEZ-ACNE-WASH', 'QBELLEZ-ACNE-CREAM', 'RK-SUNBLOCK-SPF50']);
   eq('routine scores match engine demo', scores(rec.json.routine), [1.176, 0.497, 0.269]);
   // The results panel renders "What we noticed" from this. Without it the
   // section silently renders empty, which is how it shipped before.
@@ -207,7 +261,7 @@ async function scenarioB(): Promise<void> {
 
   const rec = await api('POST', '/recommend', { token });
   eq('recommend → confidence 0.835', rec.json.confidence, 0.835);
-  eq('routine SKUs match engine demo', skus(rec.json.routine), ['QSC-BC', 'QSC-SPF50', 'QSC-NC']);
+  eq('routine SKUs match engine demo', skus(rec.json.routine), ['BEAUTY-KIT-BRIGHTENING', 'RK-SUNBLOCK-SPF50', 'BEAUTY-KIT-NIGHT']);
   eq('routine scores match engine demo', scores(rec.json.routine), [1.161, 0.662, 0.545]);
   eq('questionsAsked is screens + main round', rec.json.questionsAsked,
     ['persistent_itch', 'spreading_rash',
@@ -330,7 +384,7 @@ async function scenarioG(): Promise<void> {
       typeof c.key === 'string' && typeof c.severity === 'number' && typeof c.confidence === 'number'));
   check('routine is non-empty', rec.json.routine.length > 0);
   check('every routine SKU is one the page can price',
-    rec.json.routine.every((r: any) => /^QSC-/.test(r.sku)));
+    rec.json.routine.every((r: any) => SELLABLE.has(r.sku)));
   allRoutines.push(rec.json.routine);
 }
 
@@ -369,6 +423,133 @@ async function guards(): Promise<void> {
   if (postOk.json?.sessionId) createdSessions.push(postOk.json.sessionId);
 }
 
+async function scenarioH(): Promise<void> {
+  console.log('\nScenario H \u00b7 retention purge honours consent (spec \u00a712)');
+
+  // Unauthenticated callers must never reach the sweep.
+  const noAuth = await api('GET', '/purge');
+  eq('purge without secret \u2192 401', noAuth.status, 401);
+  const wrongAuth = await api('GET', '/purge', { token: 'not-the-cron-secret' });
+  eq('purge with wrong secret \u2192 401', wrongAuth.status, 401);
+
+  // A: consented to store_results \u2192 images go, anonymous rows stay.
+  const keeper = await newSession();
+  await api('POST', '/consent', { token: keeper.token, body: { scope: ['image_analysis', 'store_results'] } });
+  await api('POST', '/analyze', { token: keeper.token, body: { mockAssessment: PRESET_A } });
+
+  // B: image_analysis only \u2192 nothing of it survives.
+  const transient = await newSession();
+  await api('POST', '/consent', { token: transient.token, body: { scope: ['image_analysis'] } });
+  await api('POST', '/analyze', { token: transient.token, body: { mockAssessment: PRESET_A } });
+
+  // C: still inside its window. The purge must not touch it.
+  const fresh = await newSession();
+  await api('POST', '/consent', { token: fresh.token, body: { scope: ['image_analysis'] } });
+
+  await expireSession(keeper.sessionId);
+  await expireSession(transient.sessionId);
+
+  const run = await api('GET', '/purge', { token: CRON_SECRET });
+  eq('purge with the cron secret \u2192 200', run.status, 200);
+  check('no session failed', run.json.failed.length === 0, run.json.failed);
+  check('both expired sessions were swept', run.json.expired >= 2, run.json);
+
+  check('store_results session survives as anonymous rows', await sessionExists(keeper.sessionId));
+  eq('and is audited as images-only', await purgeAuditActions(keeper.sessionId), ['images_only']);
+
+  check('session without store_results is deleted outright', !(await sessionExists(transient.sessionId)));
+  eq('and is audited as a full delete', await purgeAuditActions(transient.sessionId), ['full_delete']);
+
+  check('unexpired session is untouched', await sessionExists(fresh.sessionId));
+
+  // Idempotence: the keeper is still past purge_after, so it comes back round.
+  // Sweeping it twice must be harmless, not a second delete.
+  const again = await api('GET', '/purge', { token: CRON_SECRET });
+  eq('second sweep \u2192 200', again.status, 200);
+  check('keeper still there after a repeat sweep', await sessionExists(keeper.sessionId));
+}
+
+async function scenarioI(): Promise<void> {
+  console.log('\nScenario I \u00b7 customer feedback on a finished consultation');
+
+  // ── A routine was shown: a rating is the question, and the only question.
+  const { sessionId: recSessionId, token } = await startConsult(PRESET_A);
+  await clearSafetyScreens(token);
+
+  const early = await api('POST', '/feedback', { token, body: { rating: 4 } });
+  eq('feedback before /recommend \u2192 409', early.status, 409);
+
+  const rec = await api('POST', '/recommend', { token });
+  eq('recommend \u2192 200', rec.status, 200);
+
+  const noAuth = await api('POST', '/feedback', { body: { rating: 4 } });
+  eq('feedback without token \u2192 401', noAuth.status, 401);
+
+  const wrongShape = await api('POST', '/feedback', { token, body: { clarity: 'clear' } });
+  eq('clarity on a routine \u2192 400', wrongShape.status, 400);
+  const tooHigh = await api('POST', '/feedback', { token, body: { rating: 6 } });
+  eq('rating 6 \u2192 400', tooHigh.status, 400);
+  const notInt = await api('POST', '/feedback', { token, body: { rating: 3.5 } });
+  eq('rating 3.5 \u2192 400', notInt.status, 400);
+  const missing = await api('POST', '/feedback', { token, body: { comment: 'nice' } });
+  eq('comment with no rating \u2192 400', missing.status, 400);
+
+  const sent = await api('POST', '/feedback', { token, body: { rating: 4, comment: '  Loved the oil one.  ' } });
+  eq('rating 4 + comment \u2192 201', sent.status, 201);
+  eq('kind derived from state, not the body', sent.json.kind, 'RECOMMEND');
+
+  const row = await feedbackRow(recSessionId);
+  eq('stored rating', row?.rating, 4);
+  eq('clarity left null on a routine', row?.clarity, null);
+  eq('comment trimmed', row?.comment, 'Loved the oil one.');
+
+  const twice = await api('POST', '/feedback', { token, body: { rating: 1 } });
+  eq('second review \u2192 409', twice.status, 409);
+  eq('and the first one stands', (await feedbackRow(recSessionId))?.rating, 4);
+
+  // ── A referral was shown: clarity is the question, a rating is refused.
+  const esc = await startConsult(PRESET_D);
+  const escalated = await api('POST', '/answer', {
+    token: esc.token,
+    body: { answers: { persistent_itch: 'yes_weeks', spreading_rash: 'no' } },
+  });
+  eq('itch \u2192 ESCALATE', escalated.json.route, 'ESCALATE');
+
+  const starsOnReferral = await api('POST', '/feedback', { token: esc.token, body: { rating: 5 } });
+  eq('rating on a referral \u2192 400', starsOnReferral.status, 400);
+
+  const clarity = await api('POST', '/feedback', {
+    token: esc.token,
+    body: { clarity: 'unclear', comment: 'Which doctor though?' },
+  });
+  eq('clarity on a referral \u2192 201', clarity.status, 201);
+  eq('kind ESCALATE', clarity.json.kind, 'ESCALATE');
+  const escRow = await feedbackRow(esc.sessionId);
+  eq('stored clarity', escRow?.clarity, 'unclear');
+  eq('rating left null on a referral', escRow?.rating, null);
+
+  // ── A review outlives the retention purge, including the purge that
+  //    deletes the whole session. That is the point of having no FK.
+  const transient = await newSession();
+  await api('POST', '/consent', { token: transient.token, body: { scope: ['image_analysis'] } });
+  await api('POST', '/analyze', { token: transient.token, body: { mockAssessment: PRESET_A } });
+  await clearSafetyScreens(transient.token);
+  await api('POST', '/recommend', { token: transient.token });
+  const kept = await api('POST', '/feedback', { token: transient.token, body: { rating: 5 } });
+  eq('review recorded on a no-store_results session', kept.status, 201);
+
+  await expireSession(transient.sessionId);
+  const swept = await api('GET', '/purge', { token: CRON_SECRET });
+  eq('purge \u2192 200', swept.status, 200);
+  check('session itself was deleted', !(await sessionExists(transient.sessionId)));
+  eq('but the review survived the purge', (await feedbackRow(transient.sessionId))?.rating, 5);
+
+  // ── An erasure request is different: it takes the review too.
+  const repo = createRepo(admin());
+  await repo.deleteAllForSession(transient.sessionId);
+  eq('erasure removes the review', await feedbackRow(transient.sessionId), null);
+}
+
 /** Erase everything the suite wrote — same path /delete will use (spec §12). */
 async function cleanupSessions(): Promise<void> {
   if (createdSessions.length === 0) return;
@@ -395,6 +576,7 @@ async function main(): Promise<void> {
     SESSION_JWT_SECRET: 'e2e-only-secret-do-not-use-anywhere-else',
     SHOPIFY_STOREFRONT_ORIGIN: ALLOWED_ORIGIN,
     VISION_PROVIDER: 'mock',
+    CRON_SECRET,
   };
 
   console.log('Building production bundle…');
@@ -432,11 +614,13 @@ async function main(): Promise<void> {
     await scenarioE();
     await scenarioF();
     await scenarioG();
+    await scenarioH();
+    await scenarioI();
     await guards();
 
     console.log('\nInvariant · hard-gated medical SKUs');
-    check('QSC-STS / QSC-AFS never appear in any routine',
-      allRoutines.flat().every((r: any) => r.sku !== 'QSC-STS' && r.sku !== 'QSC-AFS'));
+    check('no Regulated SKU ever appears in any routine',
+      allRoutines.flat().every((r: any) => !REGULATED.includes(r.sku)));
   } finally {
     server.kill('SIGTERM');
     await cleanupSessions();

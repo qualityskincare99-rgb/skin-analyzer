@@ -78,6 +78,41 @@ export interface RecommendationRow {
   created_at: string;
 }
 
+export type FeedbackKind = 'RECOMMEND' | 'ESCALATE';
+
+export interface FeedbackRow {
+  id: string;
+  session_id: string;
+  kind: FeedbackKind;
+  rating: number | null;
+  clarity: 'clear' | 'unclear' | null;
+  comment: string | null;
+  extra: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface FeedbackInput {
+  sessionId: string;
+  kind: FeedbackKind;
+  /** 1-5, RECOMMEND only. */
+  rating?: number;
+  /** ESCALATE only: did the referral land. */
+  clarity?: 'clear' | 'unclear';
+  comment?: string;
+}
+
+/**
+ * One session past its `purge_after`, with everything the retention policy
+ * needs to decide what to do with it. `scopes` is the union of every
+ * un-revoked consent grant on the session.
+ */
+export interface ExpiredSession {
+  id: string;
+  purgeAfter: string;
+  imageRefs: string[];
+  scopes: ConsentScope[];
+}
+
 /**
  * The persistence contract the API layer codes against. Two implementations:
  * `createRepo` (Supabase, production) and `createMemoryRepo` (lib/db/memory.ts,
@@ -90,12 +125,24 @@ export interface SkinRepo {
   saveAnswers(input: { sessionId: string; answers: Record<string, string> }): Promise<AnswerRow[]>;
   saveRecommendation(input: { sessionId: string; result: ConsultationResult }): Promise<RecommendationRow>;
   deleteAllForSession(sessionId: string): Promise<{ imagesRemoved: number }>;
+  listExpiredSessions(opts?: { now?: Date; limit?: number }): Promise<ExpiredSession[]>;
+  saveFeedback(input: FeedbackInput): Promise<FeedbackRow>;
+  getFeedback(sessionId: string): Promise<FeedbackRow | null>;
+  purgeImages(sessionId: string, refs: string[]): Promise<number>;
   logAudit(event: AuditEvent, sessionId: string | null, meta?: Record<string, unknown>): Promise<void>;
   getSession(id: string): Promise<SessionRow | null>;
   getConsent(sessionId: string): Promise<ConsentRow[]>;
   getLatestAnalysis(sessionId: string): Promise<AnalysisRow | null>;
   getAnswers(sessionId: string): Promise<AnswerRow[]>;
   updateSessionState(id: string, state: SessionState): Promise<void>;
+}
+
+/** Thrown when a session already has a review. The route turns it into a 409. */
+export class DuplicateFeedbackError extends Error {
+  constructor(sessionId: string) {
+    super(`feedback already recorded for session ${sessionId}`);
+    this.name = 'DuplicateFeedbackError';
+  }
 }
 
 export function createRepo(db: SupabaseClient): SkinRepo {
@@ -215,6 +262,96 @@ export function createRepo(db: SupabaseClient): SkinRepo {
   }
 
   /**
+   * Record the customer's review of a finished consultation.
+   *
+   * A unique index on session_id makes one-per-session a database fact rather
+   * than a route convention, so a double-tapped submit button cannot produce
+   * two rows. 23505 is that index firing; it surfaces as a clean 409 upstream
+   * instead of a 500.
+   */
+  async function saveFeedback(input: FeedbackInput): Promise<FeedbackRow> {
+    const { data, error } = await db
+      .from('feedback')
+      .insert({
+        session_id: input.sessionId,
+        kind: input.kind,
+        rating: input.rating ?? null,
+        clarity: input.clarity ?? null,
+        comment: input.comment ?? null,
+      })
+      .select()
+      .single();
+    if (error) {
+      if ((error as { code?: string }).code === '23505')
+        throw new DuplicateFeedbackError(input.sessionId);
+      fail('saveFeedback', error);
+    }
+    return data as FeedbackRow;
+  }
+
+  async function getFeedback(sessionId: string): Promise<FeedbackRow | null> {
+    const { data, error } = await db
+      .from('feedback').select().eq('session_id', sessionId).maybeSingle();
+    if (error) fail('getFeedback', error);
+    return (data as FeedbackRow | null) ?? null;
+  }
+
+  /**
+   * Sessions whose retention window has closed. Oldest first and capped, so
+   * one purge run is a bounded unit of work: a backlog drains over several
+   * ticks instead of one run timing out halfway and leaving storage and rows
+   * disagreeing about what exists.
+   */
+  async function listExpiredSessions(
+    opts: { now?: Date; limit?: number } = {},
+  ): Promise<ExpiredSession[]> {
+    const cutoff = (opts.now ?? new Date()).toISOString();
+    const { data, error } = await db
+      .from('sessions')
+      .select('id, purge_after, analyses(image_refs), consent(scope, revoked_at)')
+      .lt('purge_after', cutoff)
+      .order('purge_after', { ascending: true })
+      .limit(opts.limit ?? 500);
+    if (error) fail('listExpiredSessions', error);
+
+    type Joined = {
+      id: string;
+      purge_after: string;
+      analyses: { image_refs: string[] | null }[] | null;
+      consent: { scope: ConsentScope[] | null; revoked_at: string | null }[] | null;
+    };
+
+    return (data as Joined[]).map(row => ({
+      id: row.id,
+      purgeAfter: row.purge_after,
+      imageRefs: (row.analyses ?? []).flatMap(a => a.image_refs ?? []),
+      scopes: [...new Set((row.consent ?? []).filter(c => !c.revoked_at).flatMap(c => c.scope ?? []))],
+    }));
+  }
+
+  /**
+   * Drop one session's capture frames and forget where they were.
+   *
+   * Storage first, then `image_refs`. If the process dies between the two,
+   * the row still points at already-deleted objects and the next run retries
+   * a harmless no-op delete. The other order would leave live image files in
+   * the bucket with nothing in the database pointing at them, which is the
+   * one outcome a deletion promise cannot survive.
+   */
+  async function purgeImages(sessionId: string, refs: string[]): Promise<number> {
+    if (refs.length > 0) {
+      const { error } = await db.storage.from(IMAGE_BUCKET).remove(refs);
+      if (error) fail('purgeImages(storage)', error);
+    }
+    const { error: clearError } = await db
+      .from('analyses')
+      .update({ image_refs: [] })
+      .eq('session_id', sessionId);
+    if (clearError) fail('purgeImages(refs)', clearError);
+    return refs.length;
+  }
+
+  /**
    * Right-to-erasure (§12): storage objects first (their paths are gone once
    * the analyses rows cascade), then the session row — consent, analyses,
    * answers, and recommendations all cascade off it. The audit entry survives
@@ -232,6 +369,12 @@ export function createRepo(db: SupabaseClient): SkinRepo {
       const { error: storageError } = await db.storage.from(IMAGE_BUCKET).remove(refs);
       if (storageError) fail('deleteAllForSession(storage)', storageError);
     }
+
+    // `feedback` carries no FK to sessions on purpose (it must survive the
+    // retention purge), so the cascade will not take it. An erasure request
+    // is the one case where it must go, so delete it explicitly.
+    const { error: feedbackError } = await db.from('feedback').delete().eq('session_id', sessionId);
+    if (feedbackError) fail('deleteAllForSession(feedback)', feedbackError);
 
     const { error: deleteError } = await db.from('sessions').delete().eq('id', sessionId);
     if (deleteError) fail('deleteAllForSession(rows)', deleteError);
@@ -291,6 +434,10 @@ export function createRepo(db: SupabaseClient): SkinRepo {
     saveAnswers,
     saveRecommendation,
     deleteAllForSession,
+    listExpiredSessions,
+    purgeImages,
+    saveFeedback,
+    getFeedback,
     logAudit,
     getSession,
     getConsent,

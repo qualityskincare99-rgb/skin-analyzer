@@ -182,16 +182,16 @@ score        = Σ contributions × skin_type_fit_multiplier
 
 | SKU | Product | Slot | Time | Addresses |
 |---|---|---|---|---|
-| QSC-BFW | Brightening Face Wash | cleanser | both | dullness, uneven tone, pigmentation |
-| QSC-SPF50 | Sunblock SPF 50 | sunscreen | am | sun damage, pigmentation, dark spots |
-| QSC-NC | Night Cream | moisturizer | pm | dry patches, dehydration, fine lines |
-| QSC-BC | Brightening Cream | treatment | pm | pigmentation, dark spots, uneven tone |
-| QSC-AAFW | Anti Acne Face Wash | cleanser | both | acne, excess oil, pores |
-| QSC-AAC | Anti Acne Cream | treatment | pm | acne, acne scars |
-| QSC-AAS | Anti Acne Soap | cleanser | both | acne, excess oil |
-| QSC-BS | Brightening Soap | cleanser | both | dullness, uneven tone |
-| QSC-STS | Scabies Treatment Soap | — | — | **MEDICAL — hard-gated, never recommended** |
-| QSC-AFS | Anti Fungal Soap | — | — | **MEDICAL — hard-gated, never recommended** |
+| BEAUTY-KIT-BRIGHT-WASH | Brightening Face Wash | cleanser | both | dullness, uneven tone, pigmentation |
+| RK-SUNBLOCK-SPF50 | Sunblock SPF 50 | sunscreen | am | sun damage, pigmentation, dark spots |
+| BEAUTY-KIT-NIGHT | Night Cream | moisturizer | pm | dry patches, dehydration, fine lines |
+| BEAUTY-KIT-BRIGHTENING | Brightening Cream | treatment | pm | pigmentation, dark spots, uneven tone |
+| QBELLEZ-ACNE-WASH | Anti Acne Face Wash | cleanser | both | acne, excess oil, pores |
+| QBELLEZ-ACNE-CREAM | Anti Acne Cream | treatment | pm | acne, acne scars |
+| QBELLEZ-ACNE-SOAP | Anti Acne Soap | cleanser | both | acne, excess oil |
+| BEAUTY-KIT-BRIGHT-SOAP | Brightening Soap | cleanser | both | dullness, uneven tone |
+| SCABQ-SOAP-75G | Scabies Treatment Soap | — | — | **MEDICAL — hard-gated, never recommended** |
+| FUNGZAP-SOAP-75G | Anti Fungal Soap | — | — | **MEDICAL — hard-gated, never recommended** |
 
 ### Open decision
 Whether **cleanser should be a baseline slot** like sunscreen. The redundancy guard can currently leave a routine with no cleanser at all. This is a business call, not an engineering one.

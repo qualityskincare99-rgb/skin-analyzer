@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Skin Analyser | Quality SkinCare</title>
-<meta name="description" content="Scan your skin and get a routine built only from the Quality SkinCare products it needs. Cosmetic guidance, not a medical diagnosis."/>
+<title>Skin Consultation | Quality SkinCare</title>
+<meta name="description" content="Answer a few questions and get a routine built only from the Quality SkinCare products you need. Cosmetic guidance, not a medical diagnosis."/>
 <link rel="icon" href="assets/qsc-logo.png"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=Instrument+Sans:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -206,6 +206,41 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
 .toast svg{color:#7FD3C7}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+/* Before photo */
+.baseline{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:34px}
+.baseline[hidden]{display:none}
+.baseline img{width:104px;height:104px;object-fit:cover;border-radius:var(--radius-sm);transform:scaleX(-1)}
+@media(max-width:520px){.baseline{grid-template-columns:1fr;justify-items:start}}
+
+/* Feedback */
+.fb-wrap{position:fixed;inset:0;z-index:300;display:grid;place-items:center;padding:20px}
+.fb-wrap[hidden]{display:none}
+.fb-back{position:absolute;inset:0;background:rgba(14,79,71,.34);backdrop-filter:blur(6px);animation:fade .35s var(--ease)}
+.fb-card{position:relative;width:100%;max-width:470px;background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:clamp(24px,4vw,34px);box-shadow:var(--shadow-lg);max-height:calc(100dvh - 40px);overflow-y:auto;animation:fbIn .5s var(--ease)}
+@keyframes fbIn{from{opacity:0;transform:translateY(22px) scale(.98)}to{opacity:1;transform:none}}
+.fb-x{position:absolute;top:14px;right:14px;width:34px;height:34px;display:grid;place-items:center;border-radius:100px;color:var(--muted);transition:background .3s var(--ease),color .3s var(--ease)}
+.fb-x:hover{background:var(--bg-2);color:var(--ink)}
+.fb-card h3{font-size:clamp(23px,3vw,29px);margin:14px 0 8px;text-wrap:pretty}
+.fb-sub{color:var(--ink-soft);font-size:14.5px;margin:0 0 22px;text-wrap:pretty}
+.fb-stars{display:flex;gap:7px;margin-bottom:24px}
+/* A class with `display` beats the UA rule for [hidden], so both groups
+   need this or the rating and the referral question render together. */
+.fb-stars[hidden],.fb-choice[hidden]{display:none}
+.fb-star{width:46px;height:46px;display:grid;place-items:center;border:1px solid var(--line);border-radius:14px;color:var(--line);background:rgba(255,255,255,.6);transition:transform .3s var(--ease),border-color .3s var(--ease),color .3s var(--ease),background .3s var(--ease)}
+.fb-star:hover{transform:translateY(-2px);border-color:var(--teal)}
+.fb-star.lit{color:var(--teal);border-color:var(--teal);background:var(--teal-tint)}
+.fb-choice{display:grid;gap:10px;margin-bottom:24px}
+.fb-opt{text-align:left;padding:15px 18px;border:1px solid var(--line);border-radius:var(--radius-sm);background:rgba(255,255,255,.6);font-size:14.5px;transition:border-color .3s var(--ease),background .3s var(--ease),transform .3s var(--ease)}
+.fb-opt:hover{transform:translateY(-2px);border-color:var(--teal)}
+.fb-opt.on{border-color:var(--teal);background:var(--teal-tint);color:var(--teal-deep)}
+.fb-lab{display:block;font-family:var(--f-body);font-weight:600;font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px}
+.fb-card textarea{width:100%;box-sizing:border-box;font-family:inherit;font-size:14.5px;line-height:1.6;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 15px;resize:vertical;transition:border-color .3s var(--ease)}
+.fb-card textarea:focus{border-color:var(--teal);outline:none}
+.fb-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+.fb-foot .btn{padding:13px 22px;font-size:14px}
+.fb-thanks{text-align:center;padding:12px 0 4px}
+.fb-thanks .ic{width:52px;height:52px;margin:0 auto 16px;display:grid;place-items:center;border-radius:100px;background:var(--teal-tint);color:var(--teal)}
+@media(max-width:480px){.fb-foot{flex-direction:column-reverse}.fb-foot .btn{width:100%}}
 </style></head><body>
 
 <header class="nav"><div class="wrap nav-inner">
@@ -214,7 +249,7 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
     <li><a href="/creams.html">Creams and Washes</a></li>
     <li><a href="/soaps.html">Soaps</a></li>
     <li><a href="/index.html#ingredients">Ingredients</a></li>
-    <li><a href="#" class="pill" aria-current="page">Skin Analyser</a></li>
+    <li><a href="#" class="pill" aria-current="page">Skin Consultation</a></li>
   </ul></nav>
 </div></header>
 
@@ -233,23 +268,23 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
     <section class="panel on" id="p-consent" aria-labelledby="h-consent">
       <div class="grid2">
         <div>
-          <span class="eyebrow">Skin Analyser · Free</span>
-          <h1 class="h-lead" id="h-consent" style="margin-top:18px">A routine built<br/>from <em>your</em> skin.</h1>
-          <p class="sub" style="margin-top:20px;max-width:48ch">Take three quick photos and answer four questions. We will suggest only the Quality SkinCare products your skin needs. It takes about two minutes.</p>
-          <div class="mini-steps"><span>1 · Three photos</span><span>2 · Four questions</span><span>3 · Your routine</span></div>
+          <span class="eyebrow">Skin Consultation · Free</span>
+          <h1 class="h-lead" id="h-consent" style="margin-top:18px">A routine built<br/>around <em>you</em>.</h1>
+          <p class="sub" style="margin-top:20px;max-width:48ch">Take three photos to keep as your before, answer a few questions, and we will suggest only the Quality SkinCare products you need. It takes about two minutes.</p>
+          <div class="mini-steps"><span>1 · Three photos</span><span>2 · A few questions</span><span>3 · Your routine</span></div>
 
           <div class="consent">
             <h4>Before you start</h4>
             <ul class="cslist">
-              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>Your photos are analysed and then <strong>deleted within 24 hours</strong>. They are never public, never sold and never used for training.</span></li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>Your photos <strong>never leave your device</strong>. Nothing is uploaded, nothing is stored, and you can download them at the end to keep as a before picture.</span></li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>This is <strong>cosmetic and educational guidance</strong>. It is not a medical diagnosis and not a medical device.</span></li>
               <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 12 5 5L20 7"/></svg><span>If anything is better assessed in person, we will tell you and recommend a dermatologist instead of a product.</span></li>
             </ul>
             <label class="check" for="cs">
               <input type="checkbox" id="cs"/>
-              <span>I agree to my photos being processed for this skin analysis. I understand the results are cosmetic guidance, not medical advice.</span>
+              <span>I understand this is cosmetic guidance based on my answers, not a medical diagnosis.</span>
             </label>
-            <button class="btn btn-primary" id="startBtn" disabled style="width:100%;margin-top:16px">Start my analysis <span class="arrow">→</span></button>
+            <button class="btn btn-primary" id="startBtn" disabled style="width:100%;margin-top:16px">Start <span class="arrow">→</span></button>
             <div class="alt"><button class="link-btn" id="skipPhotos">Prefer not to use the camera? Answer questions only</button></div>
           </div>
         </div>
@@ -275,14 +310,14 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
       <div class="grid2">
         <div>
           <span class="eyebrow">Step 2 · Photos</span>
-          <h2 class="h-lead" id="h-capture" style="font-size:clamp(28px,4vw,48px);margin-top:16px">Three quick photos.<br/>Now, your <em id="shotWord">front</em>.</h2>
+          <h2 class="h-lead" id="h-capture" style="font-size:clamp(28px,4vw,48px);margin-top:16px">Three before photos.<br/>Now, your <em id="shotWord">front</em>.</h2>
           <p class="sub" style="margin-top:18px;max-width:42ch" id="shotHelp">Face the camera straight on. Fill the oval, hold still and keep the light in front of you.</p>
           <div class="readout">
             <div class="bar2"><div class="bl"><span>Lighting</span><span id="mLight">0%</span></div><div class="meter"><i id="bLight"></i></div></div>
             <div class="bar2"><div class="bl"><span>Sharpness</span><span id="mBlur">0%</span></div><div class="meter"><i id="bBlur"></i></div></div>
             <div class="bar2"><div class="bl"><span>Framing</span><span id="mFrame">0%</span></div><div class="meter"><i id="bFrame"></i></div></div>
           </div>
-          <p class="sub" style="margin-top:18px;font-size:13px;color:var(--muted)">The camera stays on your device until you press the shutter. Nothing is sent before that.</p>
+          <p class="sub" style="margin-top:18px;font-size:13px;color:var(--muted)">Your photos stay on this device. Nothing is uploaded at any point, and you can download them at the end.</p>
         </div>
 
         <div>
@@ -300,7 +335,7 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
               <div>
                 <div class="mark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
                 <h3 style="font-size:22px;margin-bottom:8px" id="veilTitle">Camera access needed</h3>
-                <p style="font-size:14px;max-width:30ch;margin:0 auto 18px" id="veilMsg">Allow camera access to scan your skin. Nothing is recorded or uploaded without your permission.</p>
+                <p style="font-size:14px;max-width:30ch;margin:0 auto 18px" id="veilMsg">Allow camera access to take your before photos. They stay on this device.</p>
                 <button class="btn btn-primary" id="camBtn">Enable camera</button>
                 <div><button class="link-btn" id="skipPhotos2">Answer questions only</button></div>
               </div>
@@ -320,21 +355,16 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
     <section class="panel" id="p-analyzing" aria-labelledby="h-analyzing">
       <div class="grid2">
         <div>
-          <span class="eyebrow">Reading your skin</span>
+          <span class="eyebrow">Nearly there</span>
           <h2 class="h-lead" id="h-analyzing" style="font-size:clamp(28px,4vw,48px);margin-top:16px">One <em>moment</em>.</h2>
-          <p class="sub" style="margin-top:18px;max-width:40ch">We are assessing hydration, oil balance, tone and texture across your three photos.</p>
-          <div class="readout">
-            <div class="bar2"><div class="bl"><span>Face detection</span><span id="aq1">...</span></div><div class="meter"><i id="ab1"></i></div></div>
-            <div class="bar2"><div class="bl"><span>Skin mapping</span><span id="aq2">...</span></div><div class="meter"><i id="ab2"></i></div></div>
-            <div class="bar2"><div class="bl"><span>Matching formulas</span><span id="aq3">...</span></div><div class="meter"><i id="ab3"></i></div></div>
-          </div>
+          <p class="sub" style="margin-top:18px;max-width:40ch">Setting up your consultation. Your photos are staying right here on your device.</p>
         </div>
         <div>
           <div class="stage">
             <canvas class="snap" id="preview"></canvas>
             <div class="face-guide good" aria-hidden="true"><div class="oval"></div></div>
             <div class="scanline on" aria-hidden="true"></div>
-            <div class="stage-top"><span class="live"><span class="p"></span> ANALYSING</span></div>
+            <div class="stage-top"><span class="live"><span class="p"></span> YOUR BEFORE PHOTO</span></div>
           </div>
         </div>
       </div>
@@ -356,21 +386,20 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
       <div class="res-head">
         <div>
           <span class="eyebrow">Your results</span>
-          <h2 class="h-lead" id="h-res" style="font-size:clamp(28px,4vw,48px);margin-top:14px">Here is what<br/>your <em>skin</em> told us.</h2>
-        </div>
-        <div class="conf">
-          <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
-            <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(23,149,135,.15)" stroke-width="3.5"/>
-            <circle id="confArc" cx="20" cy="20" r="16" fill="none" stroke="#179587" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="100.5" stroke-dashoffset="100.5" transform="rotate(-90 20 20)" style="transition:stroke-dashoffset 1.2s cubic-bezier(.22,.61,.36,1)"/>
-          </svg>
-          <div><div class="n" id="confN">0%</div><div class="l">Confidence</div></div>
+          <h2 class="h-lead" id="h-res" style="font-size:clamp(28px,4vw,48px);margin-top:14px">Here is what<br/>we would <em>use</em>.</h2>
         </div>
       </div>
 
-      <h4 class="sec-h">What we noticed</h4>
-      <div class="concerns" id="concerns"></div>
+      <div class="baseline" id="baseline" hidden>
+        <img id="baseImg" alt="Your front photo from today"/>
+        <div>
+          <h4 class="sec-h" style="margin-bottom:6px">Your before photo</h4>
+          <p class="sub" style="font-size:14px;margin:0 0 14px;max-width:46ch">Taken <span id="baseDate"></span>. It never left this device, so download it now if you want something to compare against in eight weeks.</p>
+          <a class="btn btn-ghost" id="baseDl" download="quality-skincare-before.jpg" href="#">Download it <span class="arrow">↓</span></a>
+        </div>
+      </div>
 
-      <h4 class="sec-h">Your routine</h4>
+      <h4 class="sec-h">Based on your answers</h4>
       <div class="routine" id="routine"></div>
 
       <div class="total">
@@ -394,8 +423,10 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
         <p style="font-size:14px;color:var(--muted)">We are not showing product suggestions here. The right next step is a professional opinion.</p>
         <div class="cta">
           <a class="btn btn-primary" href="#" id="escFind" target="_blank" rel="noopener">Find a dermatologist <span class="arrow">→</span></a>
+          <a class="btn btn-ghost" id="escDl" download="quality-skincare-photo.jpg" href="#" hidden>Download your photo <span class="arrow">↓</span></a>
           <button class="btn btn-ghost" id="escRestart">Start over</button>
         </div>
+        <p style="font-size:13px;color:var(--muted);margin-top:16px" id="escDlNote" hidden>Your photos never left this device. Download them if it would help to show someone.</p>
       </div>
     </section>
 
@@ -404,7 +435,7 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
 
 <div class="trust"><div class="wrap row">
   <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg> Made by Quality Pharma</div>
-  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Photos deleted within 24 hours</div>
+  <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg> Photos never leave your device</div>
   <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg> Cosmetic guidance, not a diagnosis</div>
   <div class="item"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6 9 17l-5-5"/></svg> Only the products you need</div>
 </div></div>
@@ -413,12 +444,55 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
   <a href="https://instagram.com/qualityskincare_" target="_blank" rel="noopener">@qualityskincare_</a>
 </div></footer>
 
+<!-- FEEDBACK -->
+<div class="fb-wrap" id="fbWrap" hidden>
+  <div class="fb-back" id="fbBack"></div>
+  <div class="fb-card" id="fbCard" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
+    <button class="fb-x" id="fbClose" type="button" aria-label="Close feedback">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+
+    <div id="fbForm">
+      <span class="eyebrow" id="fbEyebrow">One last thing</span>
+      <h3 id="fbTitle">How was this?</h3>
+      <p class="fb-sub" id="fbSub">Your answer goes straight to the team building this. It takes a few seconds.</p>
+
+      <div class="fb-stars" id="fbStars" role="radiogroup" aria-label="Rating out of five">
+        <button class="fb-star" type="button" data-v="1" role="radio" aria-checked="false" aria-label="1 out of 5"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.7l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg></button>
+        <button class="fb-star" type="button" data-v="2" role="radio" aria-checked="false" aria-label="2 out of 5"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.7l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg></button>
+        <button class="fb-star" type="button" data-v="3" role="radio" aria-checked="false" aria-label="3 out of 5"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.7l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg></button>
+        <button class="fb-star" type="button" data-v="4" role="radio" aria-checked="false" aria-label="4 out of 5"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.7l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg></button>
+        <button class="fb-star" type="button" data-v="5" role="radio" aria-checked="false" aria-label="5 out of 5"><svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 6.2 6.8.8-5 4.7 1.3 6.7L12 17.7l-6 3.3 1.3-6.7-5-4.7 6.8-.8z"/></svg></button>
+      </div>
+
+      <div class="fb-choice" id="fbChoice" hidden role="radiogroup" aria-label="Was the referral clear">
+        <button class="fb-opt" type="button" data-v="clear" role="radio" aria-checked="false">Yes, I understood what to do next</button>
+        <button class="fb-opt" type="button" data-v="unclear" role="radio" aria-checked="false">Not really, I am still unsure</button>
+      </div>
+
+      <label class="fb-lab" for="fbComment" id="fbCommentLab">Anything we should know?</label>
+      <textarea id="fbComment" rows="3" maxlength="2000" placeholder="Optional"></textarea>
+
+      <div class="fb-foot">
+        <button class="btn btn-ghost" type="button" id="fbSkip">Not now</button>
+        <button class="btn btn-primary" type="button" id="fbSend" disabled>Send feedback <span class="arrow">&rarr;</span></button>
+      </div>
+    </div>
+
+    <div class="fb-thanks" id="fbThanks" hidden>
+      <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg></div>
+      <h3 style="margin-bottom:8px">Thank you.</h3>
+      <p class="fb-sub" style="margin:0">That really helps.</p>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg><span id="toastMsg">Added to bag</span></div>
 <div class="sr" id="live" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
-/* Quality SkinCare — Skin Analyser client.
+/* Quality SkinCare — Skin Consultation client.
  *
  * Served by the same Next.js app as /api/skin, so the API base is relative and
  * no CORS grant is involved.
@@ -434,17 +508,17 @@ const DERM_URL = "https://www.marham.pk/doctors/dermatologist";
 
 /* Presentation only, keyed by the engine's SKUs (lib/reco/catalog.ts).
  * The engine decides WHICH products appear; this decides how they look.
- * ScabQ (QSC-STS) and FungZap (QSC-AFS) are medical treatments the engine
- * never recommends from a scan, so they are absent here too. */
+ * The four products tagged `Regulated` in Shopify (ScabQ, FungZap, FWH Cream,
+ * Blasrok) are never recommended from a scan, so they are absent here too. */
 const CATALOG = {
-  "QSC-AAFW":  { name:"Q-Bellez Acne Face Wash",          size:"120ml", price:800,  img:"assets/qb-acne-facewash.png",        variantId:null, inStock:true },
-  "QSC-AAC":   { name:"Q-Bellez Acne Cream",              size:"30g",   price:680,  img:"assets/qb-acne-cream.png",           variantId:null, inStock:true },
-  "QSC-AAS":   { name:"Q-Bellez Acne Soap Bar",           size:"75g",   price:280,  img:"assets/qb-acne-soap.png",            variantId:null, inStock:true },
-  "QSC-BFW":   { name:"Beauty Kit Brightening Face Wash", size:"120ml", price:1250, img:"assets/bk-brightening-facewash.png", variantId:null, inStock:true },
-  "QSC-BC":    { name:"Beauty Kit Brightening Cream",     size:"40g",   price:1600, img:"assets/bk-brightening-cream.png",    variantId:null, inStock:true },
-  "QSC-NC":    { name:"Beauty Kit Night Cream",           size:"40g",   price:1500, img:"assets/bk-night-cream.png",          variantId:null, inStock:true },
-  "QSC-BS":    { name:"Beauty Kit Brightening Soap Bar",  size:"75g",   price:550,  img:"assets/bk-brightening-soap.png",     variantId:null, inStock:true },
-  "QSC-SPF50": { name:"R&K Sunblock SPF 50",              size:"40g",   price:1200, img:"assets/rk-sunblock.png",             variantId:null, inStock:true }
+  "QBELLEZ-ACNE-WASH":       { name:"Q-Bellez Anti Acne Face Wash",      size:"120ml", price:800,  img:"assets/qb-acne-facewash.png",       variantId:48633440370900, inStock:true },
+  "QBELLEZ-ACNE-CREAM":      { name:"Q-Bellez Anti Acne Cream",          size:"30g",   price:680,  img:"assets/qb-acne-cream.png",          variantId:48633439256788, inStock:true },
+  "QBELLEZ-ACNE-SOAP":       { name:"Q-Bellez Anti Acne Soap",           size:"75g",   price:280,  img:"assets/qb-acne-soap.png",           variantId:48633441485012, inStock:true },
+  "BEAUTY-KIT-BRIGHT-WASH":  { name:"Beauty Kit Brightening Face Wash",  size:"120ml", price:1250, img:"assets/bk-brightening-facewash.png", variantId:48633440010452, inStock:true },
+  "BEAUTY-KIT-BRIGHTENING":  { name:"Beauty Kit Brightening Cream",      size:"40g",   price:1600, img:"assets/bk-brightening-cream.png",   variantId:48633368477908, inStock:true },
+  "BEAUTY-KIT-NIGHT":        { name:"Beauty Kit Night Cream",            size:"40g",   price:1500, img:"assets/bk-night-cream.png",         variantId:48633435521236, inStock:true },
+  "BEAUTY-KIT-BRIGHT-SOAP":  { name:"Beauty Kit Brightening Soap",       size:"75g",   price:550,  img:"assets/bk-brightening-soap.png",    variantId:48633440862420, inStock:true },
+  "RK-SUNBLOCK-SPF50":       { name:"R & K Sunblock SPF 50",             size:"40g",   price:1200, img:"assets/rk-sunblock.png",            variantId:48633436373204, inStock:true }
 };
 
 /* Engine ConcernKey → shelf language. Mirrors lib/vision/types.ts. */
@@ -606,18 +680,34 @@ function stopCamera(){ clearInterval(qTimer); if (stream) stream.getTracks().for
 /* ── Analyse ──────────────────────────────────────────────────────────── */
 async function analyze(){
   show("analyzing");
-  const stages = [["#ab1","#aq1",700], ["#ab2","#aq2",1500], ["#ab3","#aq3",2400]];
-  const timers = stages.map(([b,q,d]) => setTimeout(() => { $(b).style.width = "100%"; $(q).textContent = "Done"; }, d));
-  const done = () => { timers.forEach(clearTimeout); stages.forEach(([b,q]) => { $(b).style.width = "100%"; $(q).textContent = "Done"; }); };
+  /* The frames are deliberately NOT sent. No vision adapter exists yet, so
+     nothing on the server would read them; uploading a face photo that
+     nothing looks at is pure liability. They stay in S.frames, on this
+     device, and the customer downloads them at the end.
+
+     When hautai.ts / perfectCorp.ts land, this becomes
+     { frames:S.frames } again and the consent copy has to change with it:
+     "never leave your device" stops being true the moment it does. */
   try {
-    const data = await call("/analyze", { body:{ frames:S.frames } });
-    done();
-    routeFrom(data);
+    routeFrom(await call("/analyze", { body:{} }));
   } catch(e){
-    done();
-    fail(e, "We could not read your photos. Please try again.");
+    fail(e, "Could not start your consultation. Please try again.");
     show("consent"); resetStart();
   }
+}
+
+/* The capture is the customer's to keep. Shown back to them at the end with
+   a download, which is the whole reason the camera step still earns its
+   place while there is no model behind it. */
+function showBaseline(imgSel, linkSel, dateSel){
+  const front = S.frames.front;
+  const link = $(linkSel);
+  if (!front){ if (link) link.hidden = true; return false; }
+  if (imgSel) $(imgSel).src = front;
+  if (dateSel) $(dateSel).textContent = new Date().toLocaleDateString(undefined, { day:"numeric", month:"long", year:"numeric" });
+  link.href = front;
+  link.hidden = false;
+  return true;
 }
 
 /* The server owns the state machine. A response is one of:
@@ -677,18 +767,10 @@ async function recommend(){
   if (data.route === "ESCALATE") return escalate(data);
   S.result = data;
 
-  const pct = Math.round((data.confidence || 0) * 100);
-  $("#confN").textContent = pct + "%";
-  setTimeout(() => { $("#confArc").style.strokeDashoffset = String(100.5 * (1 - pct/100)); }, 240);
-
-  const cbox = $("#concerns"); cbox.innerHTML = "";
-  (data.concerns || []).slice().sort((a,b) => b.severity - a.severity).forEach((c, i) => {
-    const sev = c.severity, lvl = sev > .6 ? "high" : sev > .35 ? "mid" : "", txt = sev > .6 ? "Noticeable" : sev > .35 ? "Moderate" : "Mild";
-    const el = document.createElement("div"); el.className = "cn";
-    el.innerHTML = `<div class="cn-top"><span class="cn-name">${esc(PHRASE[c.key] || c.key)}</span><span class="cn-badge ${lvl}">${txt}</span></div><div class="cn-meter"><i></i></div>`;
-    cbox.appendChild(el);
-    setTimeout(() => { el.querySelector("i").style.width = Math.round(sev*100) + "%"; }, 200 + i*110);
-  });
+  /* No confidence ring and no per-concern severity bars. Both used to render
+     numbers from the fixed DEMO_PRESET, which meant every visitor was shown
+     the same readings about their own face. They come back when a real
+     provider is producing them and they mean something. */
 
   const rbox = $("#routine"); rbox.innerHTML = ""; let total = 0;
   (data.routine || []).forEach((item, i) => {
@@ -726,8 +808,11 @@ async function recommend(){
   $("#total").textContent = pkr(total);
   if (data.disclaimer) $("#discTxt").textContent = data.disclaimer;
   rbox.querySelectorAll(".add").forEach(b => b.addEventListener("click", () => addToCart([b.dataset.sku], CATALOG[b.dataset.sku].name + " added to bag")));
+  showBaseline("#baseImg", "#baseDl", "#baseDate");
+  $("#baseline").hidden = !S.frames.front;
   show("results");
   live("Your routine is ready.");
+  scheduleFeedback("RECOMMEND");
 }
 $("#addAll").addEventListener("click", () => {
   if (!S.result) return;
@@ -744,25 +829,177 @@ async function addToCart(skus, msg){
     if (!r.ok) throw new Error("cart rejected");
     toast(msg);
   } catch(e){ toast(msg + " (preview)"); }
+  scheduleFeedback("RECOMMEND", FEEDBACK_AFTER_CART_MS);
 }
+
+/* -- Feedback ----------------------------------------------------------- */
+/* Fires once per consultation, a beat after the result lands so the person
+   reads their own routine before anything covers it. The delay is the one
+   number here worth tuning: shorter gets more responses, longer keeps clear
+   of the Add to bag button. Dismissible every way a dialog should be -- the
+   X, Esc, the backdrop, or "Not now" -- because a review nobody can decline
+   is not a review.
+
+   Which question gets asked is decided by the SERVER from the session state;
+   these two copies only have to match it. A session that ended in a referral
+   can record a clarity verdict and nothing else, one that ended in a routine
+   can record a rating and nothing else, and the API rejects the wrong shape
+   either way. */
+const FEEDBACK_DELAY_MS = 12000;
+/* Adding to the bag is the conversion. Once it has happened the prompt costs
+   nothing, so it comes forward instead of waiting out the full delay. */
+const FEEDBACK_AFTER_CART_MS = 1500;
+
+const FB = { kind:null, rating:null, clarity:null, done:false, timer:null, dueAt:0, lastFocus:null };
+
+const FB_COPY = {
+  RECOMMEND: {
+    eyebrow: "One last thing",
+    title:   "How was this?",
+    sub:     "Your answer goes straight to the team building this. It takes a few seconds.",
+    label:   "Anything we should know?"
+  },
+  ESCALATE: {
+    eyebrow: "Before you go",
+    title:   "Was that clear?",
+    /* Not a rating. Someone who has just been told to see a doctor is not
+       being asked to award stars; the only thing worth knowing is whether
+       they understood what to do next. */
+    sub:     "We would rather send you to a doctor than sell you the wrong thing. We want to know if that came across.",
+    label:   "What would have helped?"
+  }
+};
+
+function scheduleFeedback(kind, ms){
+  if (FB.done) return;
+  const delay = ms ?? FEEDBACK_DELAY_MS;
+  /* An earlier trigger wins; a later one must not push a pending prompt back. */
+  if (FB.timer){
+    if (delay >= (FB.dueAt - Date.now())) return;
+    clearTimeout(FB.timer);
+  }
+  FB.dueAt = Date.now() + delay;
+  FB.timer = setTimeout(() => { FB.timer = null; openFeedback(kind); }, delay);
+}
+
+function openFeedback(kind){
+  if (FB.done || !S.token) return;
+  FB.kind = kind; FB.rating = null; FB.clarity = null;
+  FB.lastFocus = document.activeElement;
+
+  const c = FB_COPY[kind];
+  $("#fbEyebrow").textContent    = c.eyebrow;
+  $("#fbTitle").textContent      = c.title;
+  $("#fbSub").textContent        = c.sub;
+  $("#fbCommentLab").textContent = c.label;
+  $("#fbComment").value = "";
+
+  const rating = kind === "RECOMMEND";
+  $("#fbStars").hidden  = !rating;
+  $("#fbChoice").hidden = rating;
+  $$("#fbStars .fb-star").forEach(b => { b.classList.remove("lit"); b.setAttribute("aria-checked","false"); });
+  $$("#fbChoice .fb-opt").forEach(b => { b.classList.remove("on"); b.setAttribute("aria-checked","false"); });
+
+  $("#fbForm").hidden   = false;
+  $("#fbThanks").hidden = true;
+  $("#fbSend").disabled = true;
+  $("#fbSend").textContent = "Send feedback";
+  $("#fbWrap").hidden = false;
+
+  (rating ? $("#fbStars .fb-star") : $("#fbChoice .fb-opt")).focus();
+}
+
+function closeFeedback(){
+  $("#fbWrap").hidden = true;
+  if (FB.lastFocus && FB.lastFocus.focus) FB.lastFocus.focus();
+  FB.lastFocus = null;
+}
+
+/* Dismissing counts as answered for this consultation. Re-prompting someone
+   who already said no is how a feedback box turns into a nuisance. */
+function dismissFeedback(){ FB.done = true; closeFeedback(); }
+
+$$("#fbStars .fb-star").forEach(b => b.addEventListener("click", () => {
+  FB.rating = +b.dataset.v;
+  $$("#fbStars .fb-star").forEach(x => {
+    x.classList.toggle("lit", +x.dataset.v <= FB.rating);
+    x.setAttribute("aria-checked", String(+x.dataset.v === FB.rating));
+  });
+  $("#fbSend").disabled = false;
+}));
+
+$$("#fbChoice .fb-opt").forEach(b => b.addEventListener("click", () => {
+  FB.clarity = b.dataset.v;
+  $$("#fbChoice .fb-opt").forEach(x => {
+    x.classList.toggle("on", x === b);
+    x.setAttribute("aria-checked", String(x === b));
+  });
+  $("#fbSend").disabled = false;
+}));
+
+$("#fbSend").addEventListener("click", async () => {
+  const body = { comment: $("#fbComment").value.trim() || undefined };
+  if (FB.kind === "RECOMMEND") body.rating = FB.rating; else body.clarity = FB.clarity;
+
+  $("#fbSend").disabled = true;
+  $("#fbSend").textContent = "Sending...";
+  try {
+    await call("/feedback", { body });
+  } catch(e){
+    /* "Already recorded" is not a failure the customer should be shown: they
+       sent it, which is the only part they care about. Anything else is. */
+    if (!(e instanceof ApiError && e.status === 409)){
+      $("#fbSend").disabled = false;
+      $("#fbSend").textContent = "Send feedback";
+      return fail(e, "Could not send that. Please try again.");
+    }
+  }
+  FB.done = true;
+  $("#fbForm").hidden   = true;
+  $("#fbThanks").hidden = false;
+  live("Thank you for the feedback.");
+  setTimeout(closeFeedback, 1700);
+});
+
+$("#fbSkip").addEventListener("click", dismissFeedback);
+$("#fbClose").addEventListener("click", dismissFeedback);
+$("#fbBack").addEventListener("click", dismissFeedback);
+
+document.addEventListener("keydown", e => {
+  if ($("#fbWrap").hidden) return;
+  if (e.key === "Escape"){ dismissFeedback(); return; }
+  if (e.key !== "Tab") return;
+  /* Keep Tab inside the dialog while it is open. */
+  const f = $$("#fbCard button, #fbCard textarea").filter(el => !el.disabled && el.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+});
 
 /* ── Escalation ───────────────────────────────────────────────────────── */
 $("#escFind").href = DERM_URL;
 function escalate(data){
   stopCamera();
   if (data && data.disclaimer) $("#escTxt").textContent = data.disclaimer;
+  $("#escDlNote").hidden = !showBaseline(null, "#escDl", null);
   show("escalate"); live("We recommend seeing a dermatologist.");
+  scheduleFeedback("ESCALATE");
 }
 
 function restart(){
   stopCamera();
+  /* A pending prompt must not fire into a torn-down session: restart() clears
+     S.token, so a late timer would post without one. */
+  clearTimeout(FB.timer);
+  Object.assign(FB, { kind:null, rating:null, clarity:null, done:false, timer:null, dueAt:0 });
+  if (!$("#fbWrap").hidden) closeFeedback();
   Object.assign(S, { token:null, frames:{}, shot:0, questions:[], qi:0, round:{}, photos:true, result:null });
   $("#cs").checked = false; resetStart();
   $("#veil").classList.remove("hide");
   $("#veilTitle").textContent = "Camera access needed"; $("#camBtn").textContent = "Enable camera";
-  $("#confArc").style.strokeDashoffset = "100.5";
-  ["#ab1","#ab2","#ab3"].forEach(b => $(b).style.width = "0");
-  ["#aq1","#aq2","#aq3"].forEach(q => $(q).textContent = "...");
+  $("#baseline").hidden = true;
+  $("#escDl").hidden = true; $("#escDlNote").hidden = true;
   show("consent");
 }
 $("#escRestart").addEventListener("click", restart);

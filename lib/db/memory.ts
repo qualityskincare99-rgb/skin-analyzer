@@ -11,8 +11,9 @@
 import { randomUUID } from 'node:crypto';
 import type {
   AnalysisRow, AnswerRow, AuditEvent, ConsentRow, ConsentScope,
-  RecommendationRow, SessionRow, SessionState, SkinRepo,
+  FeedbackRow, RecommendationRow, SessionRow, SessionState, SkinRepo,
 } from './repo';
+import { DuplicateFeedbackError } from './repo';
 
 const ALLOWED_SCOPES: ConsentScope[] = ['image_analysis', 'store_results', 'marketing'];
 
@@ -22,6 +23,7 @@ export function createMemoryRepo(): SkinRepo {
   const analyses: AnalysisRow[] = [];
   const answers: AnswerRow[] = [];
   const recommendations: RecommendationRow[] = [];
+  const feedback: FeedbackRow[] = [];
   const auditLog: { event: AuditEvent; session_id: string | null; meta: Record<string, unknown>; at: string }[] = [];
 
   const now = () => new Date().toISOString();
@@ -128,6 +130,54 @@ export function createMemoryRepo(): SkinRepo {
       return { ...row };
     },
 
+    async saveFeedback({ sessionId, kind, rating, clarity, comment }) {
+      // Mirrors the unique index in the migration, so both repos reject a
+      // second review the same way.
+      if (feedback.some(f => f.session_id === sessionId)) throw new DuplicateFeedbackError(sessionId);
+      const row: FeedbackRow = {
+        id: randomUUID(),
+        session_id: sessionId,
+        kind,
+        rating: rating ?? null,
+        clarity: clarity ?? null,
+        comment: comment ?? null,
+        extra: {},
+        created_at: now(),
+      };
+      feedback.push(row);
+      return { ...row };
+    },
+
+    async getFeedback(sessionId) {
+      const row = feedback.find(f => f.session_id === sessionId);
+      return row ? { ...row } : null;
+    },
+
+    async listExpiredSessions({ now, limit } = {}) {
+      const cutoff = (now ?? new Date()).toISOString();
+      return [...sessions.values()]
+        .filter(s => s.purge_after < cutoff)
+        .sort((a, b) => a.purge_after.localeCompare(b.purge_after))
+        .slice(0, limit ?? 500)
+        .map(s => ({
+          id: s.id,
+          purgeAfter: s.purge_after,
+          imageRefs: analyses.filter(a => a.session_id === s.id).flatMap(a => a.image_refs),
+          scopes: [
+            ...new Set(
+              consent.filter(c => c.session_id === s.id && !c.revoked_at).flatMap(c => c.scope),
+            ),
+          ],
+        }));
+    },
+
+    async purgeImages(sessionId, refs) {
+      // No storage in memory mode; clearing the refs is the whole observable
+      // effect, same as the real repo once the bucket delete has returned.
+      for (const a of analyses) if (a.session_id === sessionId) a.image_refs = [];
+      return refs.length;
+    },
+
     async deleteAllForSession(sessionId) {
       const refs = analyses.filter(a => a.session_id === sessionId).flatMap(a => a.image_refs);
       // No storage in memory mode — refs counted for parity with the real repo.
@@ -135,7 +185,9 @@ export function createMemoryRepo(): SkinRepo {
       const drop = <T extends { session_id: string }>(arr: T[]) => {
         for (let i = arr.length - 1; i >= 0; i--) if (arr[i].session_id === sessionId) arr.splice(i, 1);
       };
-      drop(consent); drop(analyses); drop(answers); drop(recommendations);
+      // feedback has no cascade in the real schema either; erasure takes it
+      // explicitly while the retention purge leaves it alone.
+      drop(consent); drop(analyses); drop(answers); drop(recommendations); drop(feedback);
       await this.logAudit('DELETE_REQ', sessionId, { images_removed: refs.length });
       return { imagesRemoved: refs.length };
     },
