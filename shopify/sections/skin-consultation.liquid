@@ -1,0 +1,168 @@
+{%- comment -%}
+  Skin Consultation — embeds the analyser from Vercel.
+
+  Why an iframe rather than porting the page into the theme:
+  the theme's base.css already defines .btn, .btn-primary, .btn-ghost, .opt,
+  .eyebrow, .row, .sub, .total, .wrap, .item, .meter and .live — around fifty
+  rules on the exact classes the analyser's layout is built from. Dropping its
+  markup into a template means scoping every one of ~200 selectors by hand and
+  then maintaining a second copy of the page that drifts from the Vercel one.
+  A frame is its own document, so none of that can happen.
+
+  It also removes CORS from the picture entirely. The analyser calls
+  /api/skin/* relative to its own origin, so inside the frame those stay
+  same-origin on Vercel. Served from this theme they would be cross-origin and
+  every call would need SHOPIFY_STOREFRONT_ORIGIN set correctly on Vercel.
+
+  What the frame cannot do by itself is reach this store's cart: /cart/add.js
+  only exists on this origin. So the frame asks, and the handler below adds.
+
+  Install:
+    1. Theme → Edit code → Sections → Add a new section → skin-consultation
+    2. Paste this file.
+    3. Admin → Pages → Add page, title "Skin Consultation",
+       theme template: page.skin-consultation (create it if absent, with
+       {% section 'skin-consultation' %} inside {{ content_for_layout }}).
+    4. Online Store → Navigation → add the page.
+{%- endcomment -%}
+
+<div class="qsc-consult" data-qsc-consult>
+  <iframe
+    data-qsc-frame
+    src="{{ section.settings.analyser_url }}"
+    title="Skin consultation"
+    {%- comment -%}
+      allow="camera" is not optional: without this delegation the capture step
+      dies inside a cross-origin frame even though the user grants permission.
+    {%- endcomment -%}
+    allow="camera; fullscreen"
+    referrerpolicy="strict-origin-when-cross-origin"
+    scrolling="no"
+    loading="lazy"
+    style="width:100%;border:0;display:block;height:{{ section.settings.min_height }}px"></iframe>
+</div>
+
+<style>
+  .qsc-consult { width: 100%; }
+  .qsc-consult iframe { transition: height .25s ease; }
+</style>
+
+<script>
+(function () {
+  var wrap  = document.querySelector('[data-qsc-consult]');
+  if (!wrap) return;
+  var frame = wrap.querySelector('[data-qsc-frame]');
+  var MIN   = {{ section.settings.min_height | json }};
+
+  // Only ever trust messages from the deployment we actually embedded. Taking
+  // the origin from the iframe's own src means this cannot drift if the URL
+  // is changed in the theme editor.
+  var ALLOWED;
+  try { ALLOWED = new URL(frame.getAttribute('src'), location.href).origin; }
+  catch (e) { return; }
+
+  function reply(id, ok, error) {
+    frame.contentWindow.postMessage(
+      { type: 'qsc:cart:result', id: id, ok: ok, error: error || null },
+      ALLOWED
+    );
+  }
+
+  // The frame is sized to its content and has no scrollbar, so it cannot know
+  // which part of itself is on screen. Without this, its modal and toast
+  // anchor to the middle and bottom of the whole 1500px document and land
+  // off-screen. rAF-throttled: scroll fires far too often to post on each one.
+  var vpQueued = false;
+  function postViewport() {
+    vpQueued = false;
+    if (!frame.contentWindow) return;
+    var r = frame.getBoundingClientRect();
+    var top = Math.max(0, -r.top);
+    var height = Math.min(window.innerHeight, r.bottom) - Math.max(0, r.top);
+    frame.contentWindow.postMessage(
+      { type: 'qsc:viewport', top: top, height: Math.max(0, height) }, ALLOWED);
+  }
+  function queueViewport() {
+    if (vpQueued) return;
+    vpQueued = true;
+    requestAnimationFrame(postViewport);
+  }
+  window.addEventListener('scroll', queueViewport, { passive: true });
+  window.addEventListener('resize', queueViewport);
+
+  window.addEventListener('message', function (e) {
+    if (e.origin !== ALLOWED) return;
+    if (e.source !== frame.contentWindow) return;
+    var d = e.data;
+    if (!d || typeof d !== 'object') return;
+
+    if (d.type === 'qsc:height') {
+      var h = Number(d.height);
+      if (h > 0) frame.style.height = Math.max(h, MIN) + 'px';
+      queueViewport();
+      return;
+    }
+
+    // The frame moves between panels; scrolling its own window would move the
+    // frame's viewport, not the page the person is reading.
+    if (d.type === 'qsc:scrollTop') {
+      var top = wrap.getBoundingClientRect().top + window.pageYOffset - 80;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+      return;
+    }
+
+    if (d.type === 'qsc:ready') { queueViewport(); return; }
+
+    if (d.type === 'qsc:cart:add') {
+      // Rebuild the payload from scratch. Nothing from the frame reaches
+      // /cart/add.js except positive integer variant ids and quantities.
+      var items = (Array.isArray(d.items) ? d.items : [])
+        .map(function (i) {
+          return { id: parseInt(i && i.id, 10), quantity: parseInt(i && i.quantity, 10) || 1 };
+        })
+        .filter(function (i) { return Number.isInteger(i.id) && i.id > 0 && i.quantity > 0 && i.quantity <= 10; });
+
+      if (!items.length) { reply(d.id, false, 'no valid items'); return; }
+
+      fetch(window.Shopify && window.Shopify.routes && window.Shopify.routes.root
+              ? window.Shopify.routes.root + 'cart/add.js'
+              : '/cart/add.js',
+            { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: items }) })
+        .then(function (r) { return r.ok ? r.json().then(function(){ return true; }) : false; })
+        .then(function (ok) {
+          reply(d.id, ok, ok ? null : 'cart rejected');
+          // Let the theme's cart drawer or bubble notice the change.
+          if (ok) document.dispatchEvent(new CustomEvent('qsc:cart:updated'));
+        })
+        .catch(function () { reply(d.id, false, 'network'); });
+    }
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Skin consultation",
+  "settings": [
+    {
+      "type": "url",
+      "id": "analyser_url",
+      "label": "Analyser URL",
+      "info": "The deployed analyser page. Must be https and must be the exact origin, because the cart bridge trusts only this one."
+    },
+    {
+      "type": "range",
+      "id": "min_height",
+      "label": "Minimum height",
+      "min": 600,
+      "max": 1600,
+      "step": 50,
+      "unit": "px",
+      "default": 900,
+      "info": "Used before the frame reports its real height, and as a floor afterwards."
+    }
+  ],
+  "presets": [{ "name": "Skin consultation" }]
+}
+{% endschema %}

@@ -206,6 +206,18 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
 .toast svg{color:#7FD3C7}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+/* Embedded in the Shopify storefront: the theme already provides a header
+   and a footer, so ours would be a second set of both. */
+html.embed .nav, html.embed .foot{display:none}
+html.embed body{background:transparent}
+html.embed .shell{padding-top:18px}
+/* Inside a frame sized to its own content there is no frame scrollbar, so
+   position:fixed anchors to the full document height, not to what the person
+   can actually see. The parent reports the visible band and these two sit
+   inside it instead. */
+html.embed .fb-wrap{position:absolute;top:var(--vp-top,0px);height:var(--vp-h,100vh);inset-inline:0}
+html.embed .toast{position:absolute;top:calc(var(--vp-top,0px) + var(--vp-h,100vh) - 76px);bottom:auto}
+
 /* Before photo */
 .baseline{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:34px}
 .baseline[hidden]{display:none}
@@ -491,6 +503,12 @@ h1,h2,h3,h4{font-family:var(--f-display);font-weight:400;line-height:1.08;letter
 <div class="sr" id="live" role="status" aria-live="polite"></div>
 
 <script>
+/* Set before first paint: if this runs after the body renders, the duplicate
+   header flashes on screen for a frame. */
+if (window.self !== window.top) document.documentElement.classList.add("embed");
+</script>
+
+<script>
 "use strict";
 /* Quality SkinCare — Skin Consultation client.
  *
@@ -547,7 +565,12 @@ function show(name){
   $("#p-"+name).classList.add("on");
   const s = STEP_OF[name];
   $$("#stepper .st").forEach(el => { const n = +el.dataset.s; el.classList.toggle("on", n === s); el.classList.toggle("done", n < s); });
-  window.scrollTo({ top:0, behavior:"smooth" });
+  if (EMBEDDED && PARENT_ORIGIN){
+    window.parent.postMessage({ type:"qsc:scrollTop" }, PARENT_ORIGIN);
+    setTimeout(postHeight, 60);
+  } else {
+    window.scrollTo({ top:0, behavior:"smooth" });
+  }
 }
 
 /* ── API ──────────────────────────────────────────────────────────────── */
@@ -602,7 +625,7 @@ $("#startBtn").addEventListener("click", async () => {
     show("capture"); startCamera();
   } catch(e){ resetStart(); fail(e, "Could not start. Please try again."); }
 });
-function resetStart(){ $("#startBtn").disabled = !$("#cs").checked; $("#startBtn").innerHTML = 'Start my analysis <span class="arrow">→</span>'; }
+function resetStart(){ $("#startBtn").disabled = !$("#cs").checked; $("#startBtn").innerHTML = 'Start <span class="arrow">→</span>'; }
 
 /* ── Camera ───────────────────────────────────────────────────────────── */
 let stream = null, qTimer = null;
@@ -819,17 +842,90 @@ $("#addAll").addEventListener("click", () => {
   addToCart(S.result.routine.filter(i => CATALOG[i.sku] && CATALOG[i.sku].inStock !== false).map(i => i.sku), "Routine added to bag");
 });
 
-/* Shopify AJAX cart. Until variant IDs are filled in, this reports a preview
-   rather than pretending something was added. */
+/* Shopify AJAX cart.
+   ---------------------------------------------------------------------------
+   /cart/add.js only exists on the storefront's own origin. Served standalone
+   from Vercel it 404s, which is why every add here reports a preview. Framed
+   into a Shopify page it is the PARENT that can reach the cart, so the frame
+   asks and the parent answers.
+
+   Both directions are origin-locked. The frame only ever posts to a known
+   storefront origin, and only accepts a reply from the one it posted to.
+   Anything else framing this page gets no cart access at all. */
+const STOREFRONT_ORIGINS = [
+  "https://qualityskincare.pk",
+  "https://www.qualityskincare.pk",
+  "https://fxihdz-ba.myshopify.com"
+];
+const EMBEDDED = window.self !== window.top;
+/* document.referrer is the framing page on first load, which is how the frame
+   learns which of the allowed storefronts it is sitting in. */
+const PARENT_ORIGIN = (() => {
+  try { return STOREFRONT_ORIGINS.find(o => document.referrer.startsWith(o + "/")) || null; }
+  catch(e){ return null; }
+})();
+
+function cartViaParent(items){
+  return new Promise(resolve => {
+    const id = "c" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const onMsg = e => {
+      if (e.origin !== PARENT_ORIGIN) return;
+      const d = e.data;
+      if (!d || d.type !== "qsc:cart:result" || d.id !== id) return;
+      cleanup(); resolve(d.ok === true);
+    };
+    /* A parent that never answers must not hang the button forever. */
+    const timer = setTimeout(() => { cleanup(); resolve(false); }, 8000);
+    function cleanup(){ clearTimeout(timer); window.removeEventListener("message", onMsg); }
+    window.addEventListener("message", onMsg);
+    window.parent.postMessage({ type:"qsc:cart:add", id, items }, PARENT_ORIGIN);
+  });
+}
+
 async function addToCart(skus, msg){
   const items = skus.map(s => CATALOG[s] && CATALOG[s].variantId).filter(Boolean).map(id => ({ id, quantity:1 }));
   if (!items.length) return toast(msg + " (preview)");
-  try {
-    const r = await fetch("/cart/add.js", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ items }) });
-    if (!r.ok) throw new Error("cart rejected");
-    toast(msg);
-  } catch(e){ toast(msg + " (preview)"); }
+
+  let ok = false;
+  if (EMBEDDED && PARENT_ORIGIN){
+    ok = await cartViaParent(items);
+  } else {
+    try {
+      const r = await fetch("/cart/add.js", { method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify({ items }) });
+      ok = r.ok;
+    } catch(e){ ok = false; }
+  }
+  toast(ok ? msg : msg + " (preview)");
   scheduleFeedback("RECOMMEND", FEEDBACK_AFTER_CART_MS);
+}
+
+/* Height bridge: the frame has no scrollbar of its own, so the parent sizes
+   it to the content. Posted on every panel change and whenever the content
+   reflows. */
+function postHeight(){
+  if (!EMBEDDED || !PARENT_ORIGIN) return;
+  const h = Math.ceil(document.documentElement.scrollHeight);
+  window.parent.postMessage({ type:"qsc:height", height: h }, PARENT_ORIGIN);
+}
+/* The visible slice of this frame, in this frame's own coordinates. */
+function applyViewport(top, height){
+  const r = document.documentElement.style;
+  r.setProperty("--vp-top", Math.max(0, top) + "px");
+  r.setProperty("--vp-h", Math.max(200, height) + "px");
+}
+
+if (EMBEDDED && PARENT_ORIGIN){
+  addEventListener("message", e => {
+    if (e.origin !== PARENT_ORIGIN || e.source !== window.parent) return;
+    const d = e.data;
+    if (d && d.type === "qsc:viewport") applyViewport(Number(d.top) || 0, Number(d.height) || 0);
+  });
+  addEventListener("load", postHeight);
+  addEventListener("resize", postHeight);
+  new ResizeObserver(postHeight).observe(document.body);
+  /* Scroll requests go to the parent too: window.scrollTo inside a frame
+     moves the frame's own viewport, not the page the person is looking at. */
+  window.parent.postMessage({ type:"qsc:ready" }, PARENT_ORIGIN);
 }
 
 /* -- Feedback ----------------------------------------------------------- */
