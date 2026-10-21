@@ -510,8 +510,12 @@
 
 
 /* Clear the storefront's fixed header (40px offset + 72px tall). Matches the
-   theme's own .uhead convention. */
-#qsc-app .shell{padding-top:140px}
+   theme's own .uhead convention.
+
+   This goes on #qsc-app itself, NOT on .shell: .shell is the class on the
+   <main> element, and the generator keeps only that element's children, so a
+   rule targeting it matches nothing. Asserted below. */
+#qsc-app{padding-top:140px}
 
 </style>
 

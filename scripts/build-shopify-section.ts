@@ -141,9 +141,19 @@ root.walkDecls(decl => {
 const scopedCss = root.toString() + `
 
 /* Clear the storefront's fixed header (40px offset + 72px tall). Matches the
-   theme's own .uhead convention. */
-${SCOPE} .shell{padding-top:140px}
+   theme's own .uhead convention.
+
+   This goes on ${SCOPE} itself, NOT on .shell: .shell is the class on the
+   <main> element, and the generator keeps only that element's children, so a
+   rule targeting it matches nothing. Asserted below. */
+${SCOPE}{padding-top:140px}
 `;
+
+// The wrapper is the only element guaranteed to exist, so the clearance rule
+// has to sit on it. Catch a regression here rather than in a screenshot.
+if (!new RegExp(`${SCOPE.replace('#', '#')}\\{padding-top:140px\\}`).test(scopedCssTail()))
+  throw new Error('header clearance rule is not on the wrapper');
+function scopedCssTail() { return scopedCss.slice(-400); }
 
 // ── markup ───────────────────────────────────────────────────────────────────
 
