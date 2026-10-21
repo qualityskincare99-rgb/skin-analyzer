@@ -132,7 +132,18 @@ root.walkDecls(decl => {
   }
 });
 
-const scopedCss = root.toString();
+/**
+ * The storefront's header is `position: fixed; top: 40px; height: 72px`, so it
+ * covers the first 112px of every page. The theme clears it on its own pages
+ * with `.uhead { padding-top: 140px }`; this matches that rather than inventing
+ * a second number. Without it the step indicator renders underneath the nav.
+ */
+const scopedCss = root.toString() + `
+
+/* Clear the storefront's fixed header (40px offset + 72px tall). Matches the
+   theme's own .uhead convention. */
+${SCOPE} .shell{padding-top:140px}
+`;
 
 // ── markup ───────────────────────────────────────────────────────────────────
 
@@ -145,9 +156,24 @@ const rewriteImgs = (s: string) =>
     return `${attr}="{{ '${file}' | asset_url }}"`;
   });
 
-const markup = assertBalanced('markup', [
+/**
+ * `layout/theme.liquid` already renders its own `<div class="toast" id="toast">`
+ * with a `#toastMsg` inside it, so standing alone these ids are fine and inside
+ * the storefront they are duplicates. querySelector would still find ours first
+ * by document order, which is exactly the kind of thing that works until the
+ * theme moves something. Renamed rather than relied upon.
+ */
+const ID_RENAMES: [RegExp, string][] = [
+  [/\bid="toast"/g, 'id="qsc-toast"'],
+  [/\bid="toastMsg"/g, 'id="qsc-toast-msg"'],
+  [/#toastMsg\b/g, '#qsc-toast-msg'],
+  [/#toast\b(?!-)/g, '#qsc-toast'],
+];
+const renameIds = (s: string) => ID_RENAMES.reduce((acc, [re, to]) => acc.replace(re, to), s);
+
+const markup = assertBalanced('markup', renameIds([
   mainInner, trustBlock, feedbackBlock, toastAndLive,
-].map(rewriteImgs).join('\n'));
+].map(rewriteImgs).join('\n')));
 
 // ── script ───────────────────────────────────────────────────────────────────
 
@@ -193,6 +219,9 @@ replaceOnce(`  toast(ok ? msg : msg + " (preview)");
   scheduleFeedback("RECOMMEND", FEEDBACK_AFTER_CART_MS);
   return ok;
 }`, 'addToCart return');
+
+js = renameIds(js);
+if (/\$\("#toast"\)|#toastMsg/.test(js)) throw new Error('toast id rename missed a reference in the script');
 
 // ── emit ─────────────────────────────────────────────────────────────────────
 
@@ -245,24 +274,15 @@ ${js}
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, liquid);
 
-/**
- * A second copy under public/, served by the deployment.
- *
- * Shopify's themeFilesUpsert can take a URL and fetch the body itself, which
- * is how the theme gets this file without anyone pasting 70KB into the theme
- * editor. The fetch happens once at upsert time and Shopify stores the result,
- * so the theme does not depend on this copy at runtime — it is a delivery
- * mechanism, not a dependency. `.txt` so it is served as text rather than
- * downloaded.
- *
- * Consequence worth knowing: regenerating means pushing before the theme can
- * be re-synced, because Shopify fetches the deployed copy, not the local one.
- */
-const PUBLIC_COPY = resolve('public/analyzer/section.liquid.txt');
-writeFileSync(PUBLIC_COPY, liquid);
-
 console.log(`Wrote ${OUT}`);
-console.log(`  and  ${PUBLIC_COPY} (for themeFilesUpsert by URL)`);
+console.log('');
+console.log('  To sync it to the theme:');
+console.log('    pbcopy < shopify/sections/skin-consultation.liquid');
+console.log('  then paste into sections/skin-consultation.liquid in the theme editor.');
+console.log('');
+console.log('  Not scriptable: Shopify\'s themeFilesUpsert accepts a URL body only for');
+console.log('  binary assets. Images upload that way fine; every text file has to be');
+console.log('  sent inline through the API, which is not worth hand-transcribing 70KB for.');
 console.log(`  scoped CSS   ${scopedCss.length.toLocaleString()} bytes`);
 console.log(`  script       ${js.length.toLocaleString()} bytes`);
 console.log(`  keyframes    ${[...keyframeNames].join(', ')} -> ${KEYFRAME_PREFIX}*`);
