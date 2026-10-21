@@ -273,6 +273,64 @@ Caveat worth keeping in view: while the provider is mock, ratings measure the
 flow and the copy. They say nothing about accuracy, because there is no
 analysis to be accurate about.
 
+## Shopify storefront
+
+The consultation runs as a **native theme page**, not an iframe. Store
+`qualityskincare.pk` (`fxihdz-ba.myshopify.com`), Basic plan, Online Store 2.0.
+
+- Theme: **`qsc-shopify-theme-12 (skin consultation)`**, a duplicate of
+  theme-11, **unpublished**. Duplicated rather than built fresh so every
+  existing customization carries over.
+- Page: `/pages/skin-consultation`, template `page.skin-consultation`.
+- The homepage hero (`sections/hero-analyzer.liquid`) was a "coming soon"
+  placeholder. Its hardcoded strings are now settings and it links to the page.
+
+### Regenerating the section
+
+```
+npm run build:section          # index.html -> shopify/sections/skin-consultation.liquid
+pbcopy < shopify/sections/skin-consultation.liquid
+```
+then paste into `sections/skin-consultation.liquid` in the theme editor.
+
+`public/analyzer/index.html` stays the single source; the section is generated
+output and must never be hand-edited. The paste is unavoidable:
+`themeFilesUpsert` accepts a URL body only for **binary** assets (images
+upload that way), and silently ignores it for text files.
+
+What the transform does and why each part is load-bearing:
+
+| Step | Reason |
+|---|---|
+| Scope every selector to `#qsc-app` | `base.css` defines `.btn`, `.opt`, `.eyebrow`, `.row`, `.sub`, `.total`, `.wrap`, `.item`, `.meter`, `.live` — ~50 colliding rules |
+| Prefix keyframes `qsc-` | animation names are global; `fade` and `pulse` collide |
+| `#qsc-app{padding-top:140px}` | the storefront header is `fixed; top:40px; height:72px`, covering the first 112px. Matches the theme's own `.uhead` |
+| Rename `#toast` / `#toastMsg` | `layout/theme.liquid` already defines both |
+| Absolute API origin | the page is cross-origin to the API now |
+| Images to theme assets | served from Shopify's CDN rather than cross-origin |
+
+**`SHOPIFY_STOREFRONT_ORIGIN` must list the storefront origins** or every API
+call fails. Currently `https://qualityskincare.pk,https://www.qualityskincare.pk,https://fxihdz-ba.myshopify.com`.
+
+### Theme-level vs store-level
+
+A new theme isolates templates, sections, assets and `settings_data.json`.
+It does **not** isolate **pages or navigation menus** — those are store-level
+and shared with the live theme. That is why the homepage CTA lives in the
+theme's own hero rather than in the nav menu.
+
+### Known leftovers
+
+- `snippets/qsc-probe.liquid` (5 bytes) in theme-12, from probing the file
+  API. Harmless; `themeFilesDelete` is blocked by policy so it needs removing
+  by hand.
+- The nav item "Skin Analyzer" still points at `/#analyzer`. Repointing it is
+  a store-level change that affects the live theme immediately.
+- `sections/welcome-popup.liquid` fires 3s after load on every page including
+  the consultation, directly over the Start button.
+
+---
+
 ### Known gaps worth not forgetting
 - `/analyze` returns a fixed `DEMO_PRESET` and does not read the frames. Every
   consultation yields the same assessment until an adapter lands. The calibration
